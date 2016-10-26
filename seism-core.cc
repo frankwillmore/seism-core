@@ -6,20 +6,32 @@
 #include <string>
 #include <vector>
 
+#include <cstring>
+#include <stdio.h>
+
 using namespace std;
 
 int main(int argc, char** argv)
 {
-  // TODO: Write an input parser!
+    char parameter[256]; 
+    std::string rest_of_line;
+    int time, processor[3], chunk[3], domain[3];
 
-  // parse and validate arguments
-  // px, py, pz [process topolgy]
-  // dx, dy, dz [grid dimensions per process]
-  // cx, cy, cz [HDF5 dataset chunk dimensions]
-  // t [number of time steps]
-  // flag for collective I/O
+    while (true){
+        std::cin >> parameter;
+        if (parameter[0] == '#') continue; // ignore as comment
+        if (parameter[0] == 0) continue; // ignore empty line
+        if (!strcmp("DONE", parameter)) break; // exit
+        if (!strcmp("processor", parameter)) std::cin >> processor[0] >> processor[1] >> processor[2];
+        if (!strcmp("chunk", parameter)) std::cin >> chunk[0] >> chunk[1] >> chunk[2];
+        if (!strcmp("domain", parameter)) std::cin >> domain[0] >> domain[1] >> domain[2];
+        std::getline(std::cin, rest_of_line); // read the rest of the line
+    }
 
-  // total gridpoints: px * dx * py * dy * pz * dz (* t)
+    printf("processor: %d:%d:%d\n", processor[0], processor[1], processor[2]);
+    printf("chunk: %d:%d:%d\n", chunk[0], chunk[1], chunk[2]);
+    printf("domain: %d:%d:%d\n", domain[0], domain[1], domain[2]);
+    printf("time: %d\n", time);
 
   MPI_Init(&argc, &argv);
 
@@ -33,6 +45,17 @@ int main(int argc, char** argv)
   bool coll_flg = false;
   //////////////////////////////////////////////////
 
+  // px, py, pz [process topolgy]
+  px = processor[0]; py = processor[1]; pz = processor[2]; 
+  // dx, dy, dz [grid dimensions per process]
+  dx = domain[0]; dy = domain[1]; dz = domain[2]; 
+  // cx, cy, cz [HDF5 dataset chunk dimensions]
+  cx = chunk[0]; cy = chunk[1]; cz = chunk[2]; 
+  // t [number of time steps]
+  t = time;
+  // flag for collective I/O
+
+  // total gridpoints: px * dx * py * dy * pz * dz (* t)
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -160,3 +183,7 @@ int main(int argc, char** argv)
 
   return 0;
 }
+
+
+
+
