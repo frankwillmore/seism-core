@@ -1,5 +1,5 @@
 CXX=h5pcc
-CXXFLAGS=-O2
+CXXFLAGS=-Wall -O2
 
 all: seism-core
 
