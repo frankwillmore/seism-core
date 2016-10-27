@@ -1,3 +1,4 @@
+// seism-core.cc
 
 #include "hdf5.h"
 
@@ -16,6 +17,9 @@ int main(int argc, char** argv)
     char parameter[256]; 
     std::string rest_of_line;
     int time, processor[3], chunk[3], domain[3];
+    string fname = "seism-test.h5";
+    string dname = "seism-data";
+    int mpi_collective_io_int = 0;
 
     int size, rank;
     MPI_Init(&argc, &argv);
@@ -32,6 +36,7 @@ int main(int argc, char** argv)
         if (!strcmp("chunk", parameter)) std::cin >> chunk[0] >> chunk[1] >> chunk[2];
         if (!strcmp("domain", parameter)) std::cin >> domain[0] >> domain[1] >> domain[2];
         if (!strcmp("time", parameter)) std::cin >> time;
+        if (!strcmp("use_collective", parameter)) mpi_collective_io_int = true;
         std::getline(std::cin, rest_of_line); // read the rest of the line
     }
     
@@ -39,24 +44,23 @@ int main(int argc, char** argv)
     MPI_Bcast(&processor, 3, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&chunk, 3, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&domain, 3, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&mpi_collective_io_int, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    bool coll_flg = (bool)mpi_collective_io_int; // flag for collective I/O
 
     // sanity check, make sure we got the right stuff
     printf("%d/%d got processor: %d:%d:%d\n", rank, size, processor[0], processor[1], processor[2]);
     printf("%d/%d got chunk: %d:%d:%d\n", rank, size, chunk[0], chunk[1], chunk[2]);
     printf("%d/%d got domain: %d:%d:%d\n", rank, size, domain[0], domain[1], domain[2]);
     printf("%d/%d got time: %d\n", rank, size, time);
+    printf("%d/%d got collective: %d\n", rank, size, coll_flg);
 
   // total gridpoints: px * dx * py * dy * pz * dz (* t)
 
   // TODO: Don't hardcode the input parameters! /////
-  string fname = "seism-test.h5";
-  string dname = "seism-data";
   hsize_t px = 4, py = 2, pz = 2;
   hsize_t t = 10;
   hsize_t dx = 180, dy = 64, dz = 64;
   hsize_t cx = 16, cy = 16, cz = 16;
-  bool coll_flg = false;
-  //////////////////////////////////////////////////
 
   // px, py, pz [process topolgy]
   px = processor[0]; py = processor[1]; pz = processor[2]; 
@@ -66,7 +70,6 @@ int main(int argc, char** argv)
   cx = chunk[0]; cy = chunk[1]; cz = chunk[2]; 
   // t [number of time steps]
   t = time;
-  // flag for collective I/O
 
   // check the arguments
   assert(t > 0);
@@ -79,7 +82,7 @@ int main(int argc, char** argv)
       cout << "Per process grid:\t" << dx << " x " << dy << " x " << dz << endl;
       cout << "Chunk dimensions:\t" << cx << " x " << cy << " x " << cz << endl;
       cout << "Collective I/O:\t\t" << coll_flg << endl;
-    }
+  }
 
   // create the file
   hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -109,14 +112,13 @@ int main(int argc, char** argv)
   assert(dcpl >= 0);
   assert(H5Pset_chunk(dcpl, 4, cdims) >= 0);
 
-  hid_t dset = H5Dcreate2(file, dname.c_str(), H5T_IEEE_F32LE, fspace, H5P_DEFAULT,
-                          dcpl, H5P_DEFAULT);
+  hid_t dset = H5Dcreate2(file, dname.c_str(), H5T_IEEE_F32LE, fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
   assert(dset >= 0);
 
   // initialize the test data
   vector<float> v((size_t) dx*dy*dz, (float) rank);
 
-  hsize_t start[4], count[4] = {1,1,1,1}, block[4];
+  hsize_t start[4], block[4], count[4] = {1,1,1,1}; 
   // calculate offsets from RANK
   start[3] = (hsize_t) rank % pz;
   start[2] = (hsize_t) ((rank - start[3])/pz) % py;
