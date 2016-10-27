@@ -14,7 +14,7 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-    char parameter[256]; 
+    string parameter;
     std::string rest_of_line;
     unsigned int time, processor[3], chunk[3], domain[3];
     string fname = "seism-test.h5";
@@ -29,14 +29,14 @@ int main(int argc, char** argv)
     // rank 0 reads the input file, then broadcasts
     if (rank==0) while (true){
         std::cin >> parameter;
-        if (parameter[0] == '#') continue; // ignore as comment
-        if (parameter[0] == 0) continue; // ignore empty line
-        if (!strcmp("DONE", parameter)) break; // exit
-        if (!strcmp("processor", parameter)) std::cin >> processor[0] >> processor[1] >> processor[2];
-        if (!strcmp("chunk", parameter)) std::cin >> chunk[0] >> chunk[1] >> chunk[2];
-        if (!strcmp("domain", parameter)) std::cin >> domain[0] >> domain[1] >> domain[2];
-        if (!strcmp("time", parameter)) std::cin >> time;
-        if (!strcmp("use_collective", parameter)) mpi_collective_io_int = true;
+        if (parameter.at(0) == '#') continue; // ignore as comment
+        if (parameter.at(0) == 0) continue; // ignore empty line
+        if (!parameter.compare("DONE")) break; // exit
+        if (!parameter.compare("processor")) std::cin >> processor[0] >> processor[1] >> processor[2];
+        if (!parameter.compare("chunk")) std::cin >> chunk[0] >> chunk[1] >> chunk[2];
+        if (!parameter.compare("domain")) std::cin >> domain[0] >> domain[1] >> domain[2];
+        if (!parameter.compare("time")) std::cin >> time;
+        if (!parameter.compare("use_collective")) mpi_collective_io_int = true;
         std::getline(std::cin, rest_of_line); // read the rest of the line
     }
     
@@ -46,13 +46,6 @@ int main(int argc, char** argv)
     MPI_Bcast(&domain, 3, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&mpi_collective_io_int, 1, MPI_INT, 0, MPI_COMM_WORLD);
     bool coll_flg = (bool)mpi_collective_io_int; // flag for collective I/O
-
-    // sanity check, make sure we got the right stuff
-    // printf("%d/%d got processor: %d:%d:%d\n", rank, size, processor[0], processor[1], processor[2]);
-    // printf("%d/%d got chunk: %d:%d:%d\n", rank, size, chunk[0], chunk[1], chunk[2]);
-    // printf("%d/%d got domain: %d:%d:%d\n", rank, size, domain[0], domain[1], domain[2]);
-    // printf("%d/%d got time: %d\n", rank, size, time);
-    // printf("%d/%d got collective: %d\n", rank, size, coll_flg);
 
     // check the arguments
     assert(time > 0);
