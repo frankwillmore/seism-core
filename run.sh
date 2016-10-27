@@ -10,9 +10,14 @@
 
 # make three measurements for each
 # for p in 
-    mpiexec -n 8 ./seism-core << EOF
+# processor 2 2 2
+# chunk 16 16 16
+# domain 180 64 64
+# time 2
+
+mpiexec -n 8 ./seism-core << EOF
 processor 2 2 2
-chunk 16 16 16
+chunk 180 128 128
 domain 180 64 64
 time 2
 DONE

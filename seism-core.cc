@@ -17,7 +17,13 @@ int main(int argc, char** argv)
     std::string rest_of_line;
     int time, processor[3], chunk[3], domain[3];
 
-    while (true){
+    int size, rank;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    // rank 0 reads the input file, then broadcasts
+    if (rank==0) while (true){
         std::cin >> parameter;
         if (parameter[0] == '#') continue; // ignore as comment
         if (parameter[0] == 0) continue; // ignore empty line
@@ -25,15 +31,22 @@ int main(int argc, char** argv)
         if (!strcmp("processor", parameter)) std::cin >> processor[0] >> processor[1] >> processor[2];
         if (!strcmp("chunk", parameter)) std::cin >> chunk[0] >> chunk[1] >> chunk[2];
         if (!strcmp("domain", parameter)) std::cin >> domain[0] >> domain[1] >> domain[2];
+        if (!strcmp("time", parameter)) std::cin >> time;
         std::getline(std::cin, rest_of_line); // read the rest of the line
     }
+    
+    MPI_Bcast(&time, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&processor, 3, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&chunk, 3, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&domain, 3, MPI_INT, 0, MPI_COMM_WORLD);
 
-    printf("processor: %d:%d:%d\n", processor[0], processor[1], processor[2]);
-    printf("chunk: %d:%d:%d\n", chunk[0], chunk[1], chunk[2]);
-    printf("domain: %d:%d:%d\n", domain[0], domain[1], domain[2]);
-    printf("time: %d\n", time);
+    // sanity check, make sure we got the right stuff
+    printf("%d/%d got processor: %d:%d:%d\n", rank, size, processor[0], processor[1], processor[2]);
+    printf("%d/%d got chunk: %d:%d:%d\n", rank, size, chunk[0], chunk[1], chunk[2]);
+    printf("%d/%d got domain: %d:%d:%d\n", rank, size, domain[0], domain[1], domain[2]);
+    printf("%d/%d got time: %d\n", rank, size, time);
 
-  MPI_Init(&argc, &argv);
+  // total gridpoints: px * dx * py * dy * pz * dz (* t)
 
   // TODO: Don't hardcode the input parameters! /////
   string fname = "seism-test.h5";
@@ -55,18 +68,12 @@ int main(int argc, char** argv)
   t = time;
   // flag for collective I/O
 
-  // total gridpoints: px * dx * py * dy * pz * dz (* t)
-  int size, rank;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   // check the arguments
   assert(t > 0);
   assert(px*py*pz == (hsize_t) size);
   assert(px > 1 && py > 1 && pz > 1);
 
-  if (rank == 0)
-    {
+  if (rank == 0) {
       cout << "Number of processes:\t" << size << endl;
       cout << "Process layout:\t\t" << px << " x " << py << " x " << pz << endl;
       cout << "Per process grid:\t" << dx << " x " << dy << " x " << dz << endl;
@@ -141,19 +148,10 @@ int main(int argc, char** argv)
 
       start[0] = (hsize_t) it;
 
-      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, count, block)
-             >= 0);
+      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, count, block) >= 0);
 
-      if (coll_flg)
-        {
-          assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxpl, &v[0])
-                 >= 0);
-        }
-      else
-        {
-          assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, H5P_DEFAULT, &v[0])
-                 >= 0);
-        }
+      if (coll_flg) assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxpl, &v[0]) >= 0);
+      else assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, H5P_DEFAULT, &v[0]) >= 0);
     }
 
   assert(H5Sclose(mspace) >= 0);
@@ -183,7 +181,3 @@ int main(int argc, char** argv)
 
   return 0;
 }
-
-
-
-
