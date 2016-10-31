@@ -9,7 +9,7 @@
 // 3. The voxel resolution (per process).
 // 4. The number of time steps (>= 1) to be written.
 //
-// An example input line is shown below:
+// An example input script is shown below:
 //
 // mpiexec -n 8 ./seism-core << EOF
 // processor 2 2 2
@@ -30,68 +30,69 @@
 
 using namespace std;
 
-int main(int argc, char** argv)
-{
-  int size, rank;
-  MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+unsigned int simulation_time, processor[3], chunk[3], domain[3];
+bool coll_flg; // flag for collective I/O
+int mpi_collective_io_int = 0;
+int mpi_size, mpi_rank;
 
+void parse_args()
+{
   // rank 0 reads the input file, then broadcasts
   string parameter;
   string rest_of_line;
-  unsigned int time, processor[3], chunk[3], domain[3];
-  int mpi_collective_io_int = 0;
+  while (true){
+    cin >> parameter;
+    if (parameter.at(0) == '#') continue; // ignore as comment
+    if (parameter.at(0) == 0) continue; // ignore empty line
+    if (!parameter.compare("DONE")) break; // exit
+    if (!parameter.compare("processor"))
+      cin >> processor[0] >> processor[1] >> processor[2];
+    if (!parameter.compare("chunk"))
+      cin >> chunk[0] >> chunk[1] >> chunk[2];
+    if (!parameter.compare("domain"))
+      cin >> domain[0] >> domain[1] >> domain[2];
+    if (!parameter.compare("time"))
+      cin >> simulation_time;
+    if (!parameter.compare("use_collective"))
+      mpi_collective_io_int = true;
+    getline(cin, rest_of_line); // read the rest of the line
+  }
 
-  if (rank==0)
-    {
-      while (true){
-        cin >> parameter;
-        if (parameter.at(0) == '#') continue; // ignore as comment
-        if (parameter.at(0) == 0) continue; // ignore empty line
-        if (!parameter.compare("DONE")) break; // exit
-        if (!parameter.compare("processor"))
-          cin >> processor[0] >> processor[1] >> processor[2];
-        if (!parameter.compare("chunk"))
-          cin >> chunk[0] >> chunk[1] >> chunk[2];
-        if (!parameter.compare("domain"))
-          cin >> domain[0] >> domain[1] >> domain[2];
-        if (!parameter.compare("time"))
-          cin >> time;
-        if (!parameter.compare("use_collective"))
-          mpi_collective_io_int = true;
-        getline(cin, rest_of_line); // read the rest of the line
-      }
-    }
+  // echo the args back
+  cout << "\nNumber of processes:\t" << mpi_size << endl;
+  cout << "Process layout:\t\t" << processor[0] << " x " <<
+    processor[1] << " x " << processor[2] << endl;
+  cout << "Per process grid:\t" << domain[0] << " x " << domain[1] <<
+    " x " << domain[2] << endl;
+  cout << "Chunk dimensions:\t" << chunk[0] << " x " << chunk[1] <<
+    " x " << chunk[2] << endl;
+  cout << "Number of time steps:\t" << simulation_time << endl;
+  cout << "Collective I/O:\t\t" << coll_flg << endl;
+      
+  // check the arguments
+  assert(simulation_time > 0);
+  assert(processor[0]*processor[1]*processor[2] == (hsize_t) mpi_size);
+  assert(processor[0] > 1 && processor[1] > 1 && processor[2] > 1);
+  assert(chunk[0] > 1 && chunk[1] > 1 && chunk[2] > 1);
+  assert(domain[0] > 1 && domain[1] > 1 && domain[2] > 1);
+}
 
-  assert(MPI_Bcast(&time, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
+int main(int argc, char** argv)
+{
+  MPI_Init(&argc, &argv);
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+
+  if (mpi_rank==0) parse_args();
+
+  assert(MPI_Bcast(&simulation_time, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
   assert(MPI_Bcast(&processor, 3, MPI_INT, 0, MPI_COMM_WORLD) ==
          MPI_SUCCESS);
   assert(MPI_Bcast(&chunk, 3, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
   assert(MPI_Bcast(&domain, 3, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
   assert(MPI_Bcast(&mpi_collective_io_int, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
          MPI_SUCCESS);
-  bool coll_flg = (bool)mpi_collective_io_int; // flag for collective I/O
-
-  // check the arguments
-  assert(time > 0);
-  assert(processor[0]*processor[1]*processor[2] == (hsize_t) size);
-  assert(processor[0] > 1 && processor[1] > 1 && processor[2] > 1);
-  assert(chunk[0] > 1 && chunk[1] > 1 && chunk[2] > 1);
-  assert(domain[0] > 1 && domain[1] > 1 && domain[2] > 1);
-
-  if (rank == 0)
-    {
-      cout << "\nNumber of processes:\t" << size << endl;
-      cout << "Process layout:\t\t" << processor[0] << " x " <<
-        processor[1] << " x " << processor[2] << endl;
-      cout << "Per process grid:\t" << domain[0] << " x " << domain[1] <<
-        " x " << domain[2] << endl;
-      cout << "Chunk dimensions:\t" << chunk[0] << " x " << chunk[1] <<
-        " x " << chunk[2] << endl;
-      cout << "Number of time steps:\t" << time << endl;
-      cout << "Collective I/O:\t\t" << coll_flg << endl;
-    }
+  coll_flg = (bool)mpi_collective_io_int;  // translate to boolean
 
   // create the file
   hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -111,9 +112,9 @@ int main(int argc, char** argv)
   assert(H5Pclose(fapl) >= 0);
 
   // create the dataspace
-  // NOTE: time dimension first!
+  // NOTE: simulation_time dimension first!
   hsize_t dims[H5S_MAX_RANK];
-  dims[0] = time;
+  dims[0] = simulation_time;
   dims[1] = processor[0]*domain[0];
   dims[2] = processor[1]*domain[1];
   dims[3] = processor[2]*domain[2];
@@ -121,7 +122,7 @@ int main(int argc, char** argv)
   assert(fspace >= 0);
 
   // set up chunking
-  // NOTE: extent of time dimension is 1
+  // NOTE: extent of simulation_time dimension is 1
   hsize_t cdims[H5S_MAX_RANK];
   cdims[0] = 1;
   cdims[1] = chunk[0];
@@ -139,15 +140,15 @@ int main(int argc, char** argv)
   assert(dset >= 0);
 
   // initialize the test data to MPI rank
-  vector<float> v((size_t) domain[0]*domain[1]*domain[2], (float) rank);
+  vector<float> v((size_t) domain[0]*domain[1]*domain[2], (float) mpi_rank);
 
   // prepare hyperslab selection
   hsize_t start[4], block[4], count[4] = {1,1,1,1};
 
   // calculate offsets from MPI rank
-  start[3] = (hsize_t) rank % processor[2];
-  start[2] = (hsize_t) ((rank - start[3])/processor[2]) % processor[1];
-  start[1] = (hsize_t) ((rank - start[3])/processor[2] - start[2]) /
+  start[3] = (hsize_t) mpi_rank % processor[2];
+  start[2] = (hsize_t) ((mpi_rank - start[3])/processor[2]) % processor[1];
+  start[1] = (hsize_t) ((mpi_rank - start[3])/processor[2] - start[2]) /
     processor[1];
 
   start[1] *= domain[0];
@@ -174,11 +175,11 @@ int main(int argc, char** argv)
 
   // start the time stepping
 
-  vector<double> tstamps(time + 1);
+  vector<double> tstamps(simulation_time + 1);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  for (size_t it = 0; it < time; ++it)
+  for (size_t it = 0; it < simulation_time; ++it)
     {
       tstamps[it] = MPI_Wtime();
 
@@ -209,16 +210,16 @@ int main(int argc, char** argv)
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  tstamps[time] = MPI_Wtime();
+  tstamps[simulation_time] = MPI_Wtime();
 
   // print timings/throughput
-  size_t bytes_written = time * processor[0] * domain[0] * processor[1] *
+  size_t bytes_written = simulation_time * processor[0] * domain[0] * processor[1] *
     domain[1] *  processor[2] * domain[2] * sizeof(float);
 
-  if (rank == 0)
+  if (mpi_rank == 0)
     {
       cout << "Aggregate throughput:\t" << bytes_written /
-        (tstamps[time] - tstamps[0]) / ((double) (1<<20)) << " MB/s" <<
+        (tstamps[simulation_time] - tstamps[0]) / ((double) (1<<20)) << " MB/s" <<
         endl;
     }
 
