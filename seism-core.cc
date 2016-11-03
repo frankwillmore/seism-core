@@ -42,6 +42,7 @@ int main(int argc, char** argv)
   string rest_of_line;
   unsigned int time, processor[3], chunk[3], domain[3];
   int mpi_collective_io_int = 0;
+  int separate_timesteps = 0;
 
   if (rank==0)
     {
@@ -60,6 +61,8 @@ int main(int argc, char** argv)
           cin >> time;
         if (!parameter.compare("use_collective"))
           mpi_collective_io_int = true;
+        if (!parameter.compare("separate_timesteps"))
+          separate_timesteps = true;
         getline(cin, rest_of_line); // read the rest of the line
       }
     }
@@ -72,6 +75,7 @@ int main(int argc, char** argv)
   assert(MPI_Bcast(&mpi_collective_io_int, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
          MPI_SUCCESS);
   bool coll_flg = (bool)mpi_collective_io_int; // flag for collective I/O
+  bool time_flg = (bool)separate_timesteps; // flag for collective I/O
 
   // check the arguments
   assert(time > 0);
@@ -91,6 +95,7 @@ int main(int argc, char** argv)
         " x " << chunk[2] << endl;
       cout << "Number of time steps:\t" << time << endl;
       cout << "Collective I/O:\t\t" << coll_flg << endl;
+      cout << "Separate timesteps:\t" << time_flg << endl;
     }
 
   // create the file
@@ -160,8 +165,12 @@ int main(int argc, char** argv)
   block[3] = domain[2];
 
   // data transfer property list for collective I/O (optional)
-  hid_t dxpl = H5Pcreate(H5P_DATASET_XFER);
-  assert(H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE) >= 0);
+  hid_t dxpl = H5P_DEFAULT;
+  if (coll_flg)
+    {
+      dxpl = H5Pcreate(H5P_DATASET_XFER);
+      assert(H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE) >= 0);
+    }
 
   // create in-memory dataspace
   dims[0] = 1;
@@ -187,16 +196,9 @@ int main(int argc, char** argv)
       assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, count,
                                  block) >= 0);
 
-      if (coll_flg)
-        {
-          assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxpl,
-                          &v[0]) >= 0);
-        }
-      else
-        {
-          assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace,
-                          H5P_DEFAULT, &v[0]) >= 0);
-        }
+      // Write the data. dxpl was set to default or collective above
+      assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxpl, &v[0]) 
+             >= 0);
     }
 
   // release open handles
