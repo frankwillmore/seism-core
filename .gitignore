@@ -1,3 +1,4 @@
 seism-core
-seism-test.h5
+*.o
+*.h5
 
