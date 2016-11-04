@@ -120,7 +120,6 @@ int main(int argc, char** argv)
 
   // create the dataspace, time dimension first!
   hsize_t n_dims = 4;
-  //hsize_t dims[H5S_MAX_RANK];
   hsize_t dims[n_dims];
   if (time_flg) {
       n_dims = 3;
@@ -129,20 +128,18 @@ int main(int argc, char** argv)
       dims[2] = processor[2]*domain[2];
   }
   else {
-     // n_dims = 4;
       dims[0] = time;
       dims[1] = processor[0]*domain[0];
       dims[2] = processor[1]*domain[1];
       dims[3] = processor[2]*domain[2];
   }
-  //hid_t n_dimsspace = H5Screate_simple(4, dims, NULL);
+
   hid_t fspace = H5Screate_simple(n_dims, dims, NULL);
   assert(fspace >= 0);
 
-  // set up chunking
-  // NOTE: extent of time dimension is 1
+  // set up chunking... NOTE: extent of time dimension is 1
   hsize_t cdims[n_dims];
-  // hsize_t cdims[H5S_MAX_RANK];
+
   if (time_flg) {
       cdims[0] = chunk[0];
       cdims[1] = chunk[1];
@@ -165,7 +162,6 @@ int main(int argc, char** argv)
 
   // prepare hyperslab selection, use max dims, can ignore 4th as needed
   hsize_t start[4], block[4], count[4] = {1,1,1,1};
-  //hsize_t start[n_dims], block[n_dims], count[4] = {1,1,1,1};
 
   // calculate offsets from MPI rank
   start[3] = (hsize_t) rank % processor[2];
@@ -173,7 +169,8 @@ int main(int argc, char** argv)
   start[1] = (hsize_t) ((rank - start[3])/processor[2] - start[2]) /
     processor[1];
 
-  if (time_flg) {
+  if (time_flg) 
+    {
       start[0] *= domain[0];
       start[1] *= domain[1];
       start[2] *= domain[2];
@@ -181,8 +178,9 @@ int main(int argc, char** argv)
       block[0] = domain[0];
       block[1] = domain[1];
       block[2] = domain[2];
-  }
-  else {
+    }
+  else 
+    {
       start[1] *= domain[0];
       start[2] *= domain[1];
       start[3] *= domain[2];
@@ -191,26 +189,30 @@ int main(int argc, char** argv)
       block[1] = domain[0];
       block[2] = domain[1];
       block[3] = domain[2];
-  }
+    }
 
   // data transfer property list for collective I/O (optional)
   hid_t dxpl = H5P_DEFAULT;
-  if (coll_flg) {
+  if (coll_flg) 
+    {
       dxpl = H5Pcreate(H5P_DATASET_XFER);
       assert(H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE) >= 0);
     }
 
   // create in-memory dataspace
-  if (time_flg) {
+  if (time_flg) 
+    {
       dims[0] = domain[0];
       dims[1] = domain[1];
       dims[2] = domain[2];
-  } else {
+    } 
+  else 
+    {
       dims[0] = 1;
       dims[1] = domain[0];
       dims[2] = domain[1];
       dims[3] = domain[2];
-  }
+    }
 
   hid_t mspace = H5Screate_simple(n_dims, dims, NULL);
   assert(mspace >= 0);
@@ -226,7 +228,8 @@ int main(int argc, char** argv)
   string dname = "seism-data";
   // create the dataset once if not creating for each time step
   if (!time_flg) {
-      dset = H5Dcreate2(file, dname.c_str(), H5T_IEEE_F32LE, fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+      dset = H5Dcreate2(file, dname.c_str(), H5T_IEEE_F32LE, fspace, 
+                        H5P_DEFAULT, dcpl, H5P_DEFAULT);
       assert(dset >= 0);
   }
 
