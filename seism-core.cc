@@ -117,7 +117,6 @@ int main(int argc, char** argv)
   hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
   assert(file >= 0);
   assert(H5Pclose(fapl) >= 0);
-cout << "here: " << rank << "/" << endl;
 
   // create the dataspace, time dimension first!
   hsize_t n_dims = 4;
@@ -164,11 +163,9 @@ cout << "here: " << rank << "/" << endl;
   // initialize the test data to MPI rank
   vector<float> v((size_t) domain[0]*domain[1]*domain[2], (float) rank);
 
-cout << "here2: " << rank << "/" << endl;
-  // prepare hyperslab selection
-  //hsize_t start[4], block[4], count[4] = {1,1,1,1};
-  hsize_t start[n_dims], block[n_dims], count[4] = {1,1,1,1};
-// need to fix..
+  // prepare hyperslab selection, use max dims, can ignore 4th as needed
+  hsize_t start[4], block[4], count[4] = {1,1,1,1};
+  //hsize_t start[n_dims], block[n_dims], count[4] = {1,1,1,1};
 
   // calculate offsets from MPI rank
   start[3] = (hsize_t) rank % processor[2];
@@ -242,13 +239,11 @@ cout << "here2: " << rank << "/" << endl;
       // if storing timesteps separately, create a new group for each:
       if (time_flg){
           string group_name = "/" + padIntWithZeros(it, 6);
-          cout << "creating group :::" << group_name << ":::" << endl;
           hid_t group = H5Gcreate(file, group_name.c_str(), H5P_DEFAULT, 
                             H5P_DEFAULT, H5P_DEFAULT);
           assert(group >= 0);
           assert(H5Gclose(group) >=0);
           string dset_name = group_name + "/" + dname;
-          cout << "Attempting to create dtaset ***" << dset_name.c_str() << "***" << endl;
           dset = H5Dcreate2(file, dset_name.c_str(), H5T_IEEE_F32LE, 
                                   fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
           assert(dset >= 0);
