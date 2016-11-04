@@ -6,5 +6,6 @@ chunk 360 128 128
 domain 180 128 128
 time 3
 use_collective
+separate_timesteps
 DONE
 EOF
