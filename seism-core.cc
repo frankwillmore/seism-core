@@ -102,6 +102,8 @@ int main(int argc, char** argv)
     }
 
 
+  coll_flg = (bool)mpi_collective_io_int;  // translate to boolean
+
   // create the fapl
   hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
   assert(fapl >= 0);
@@ -237,7 +239,6 @@ int main(int argc, char** argv)
   MPI_Barrier(MPI_COMM_WORLD);
 
   string dname = "seism-data";
-
   hid_t dset; // dataset; will be created/destroyed within time loop or outside
 
   // start the time stepping
