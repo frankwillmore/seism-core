@@ -9,7 +9,7 @@
 // 3. The voxel resolution (per process).
 // 4. The number of time steps (>= 1) to be written.
 //
-// An example input line is shown below:
+// An example input script is shown below:
 //
 // mpiexec -n 8 ./seism-core << EOF
 // processor 2 2 2
@@ -33,19 +33,19 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-  int size, rank;
+  int mpi_size, mpi_rank;
   MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
   // rank 0 reads the input file, then broadcasts
   string parameter;
   string rest_of_line;
-  unsigned int time, processor[3], chunk[3], domain[3];
+  unsigned int simulation_time, processor[3], chunk[3], domain[3];
   int mpi_collective_io_int = 0;
   int separate_timesteps = 0;
 
-  if (rank==0)
+  if (mpi_rank==0)
     {
       while (true){
         cin >> parameter;
@@ -59,7 +59,7 @@ int main(int argc, char** argv)
         if (!parameter.compare("domain"))
           cin >> domain[0] >> domain[1] >> domain[2];
         if (!parameter.compare("time"))
-          cin >> time;
+          cin >> simulation_time;
         if (!parameter.compare("use_collective"))
           mpi_collective_io_int = true;
         if (!parameter.compare("separate_timesteps"))
@@ -68,7 +68,7 @@ int main(int argc, char** argv)
       }
     }
 
-  assert(MPI_Bcast(&time, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
+  assert(MPI_Bcast(&simulation_time, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
   assert(MPI_Bcast(&processor, 3, MPI_INT, 0, MPI_COMM_WORLD) ==
          MPI_SUCCESS);
   assert(MPI_Bcast(&chunk, 3, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
@@ -82,27 +82,27 @@ int main(int argc, char** argv)
 
   // check the arguments
   assert(time > 0);
-  assert(processor[0]*processor[1]*processor[2] == (hsize_t) size);
+  assert(processor[0]*processor[1]*processor[2] == (hsize_t) mpi_size);
   assert(processor[0] > 1 && processor[1] > 1 && processor[2] > 1);
   assert(chunk[0] > 1 && chunk[1] > 1 && chunk[2] > 1);
   assert(domain[0] > 1 && domain[1] > 1 && domain[2] > 1);
 
-  if (rank == 0)
+  if (mpi_rank == 0)
     {
-      cout << "\nNumber of processes:\t" << size << endl;
+      cout << "\nNumber of processes:\t" << mpi_size << endl;
       cout << "Process layout:\t\t" << processor[0] << " x " <<
         processor[1] << " x " << processor[2] << endl;
       cout << "Per process grid:\t" << domain[0] << " x " << domain[1] <<
         " x " << domain[2] << endl;
       cout << "Chunk dimensions:\t" << chunk[0] << " x " << chunk[1] <<
         " x " << chunk[2] << endl;
-      cout << "Number of time steps:\t" << time << endl;
+      cout << "Number of time steps:\t" << simulation_time << endl;
       cout << "Collective I/O:\t\t" << coll_flg << endl;
       cout << "Separate timesteps:\t" << time_flg << endl;
     }
 
-  
-  // set up the file; create the file access property list
+
+  // create the fapl
   hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
   assert(fapl >= 0);
 
@@ -133,7 +133,7 @@ int main(int argc, char** argv)
     }
   else 
     {
-      dims[0] = time;
+      dims[0] = simulation_time;
       dims[1] = processor[0]*domain[0];
       dims[2] = processor[1]*domain[1];
       dims[3] = processor[2]*domain[2];
@@ -171,9 +171,9 @@ int main(int argc, char** argv)
   // calculate offsets from MPI rank
   if (time_flg) 
     {
-      start[2] = (hsize_t) rank % processor[2];
-      start[1] = (hsize_t) ((rank - start[2])/processor[2]) % processor[1];
-      start[0] = (hsize_t) ((rank - start[2])/processor[2] - start[1]) /
+      start[2] = (hsize_t) mpi_rank % processor[2];
+      start[1] = (hsize_t) ((mpi_rank - start[2])/processor[2]) % processor[1];
+      start[0] = (hsize_t) ((mpi_rank - start[2])/processor[2] - start[1]) /
         processor[1];
       start[0] *= domain[0];
       start[1] *= domain[1];
@@ -185,9 +185,9 @@ int main(int argc, char** argv)
     }
   else 
     {
-      start[3] = (hsize_t) rank % processor[2];
-      start[2] = (hsize_t) ((rank - start[3])/processor[2]) % processor[1];
-      start[1] = (hsize_t) ((rank - start[3])/processor[2] - start[2]) /
+      start[3] = (hsize_t) mpi_rank % processor[2];
+      start[2] = (hsize_t) ((mpi_rank - start[3])/processor[2]) % processor[1];
+      start[1] = (hsize_t) ((mpi_rank - start[3])/processor[2] - start[2]) /
         processor[1];
       start[1] *= domain[0];
       start[2] *= domain[1];
@@ -230,9 +230,9 @@ int main(int argc, char** argv)
 
 
   // initialize the test data to MPI rank
-  vector<float> v((size_t) domain[0]*domain[1]*domain[2], (float) rank);
+  vector<float> v((size_t) domain[0]*domain[1]*domain[2], (float) mpi_rank);
 
-  vector<double> tstamps(time + 1);
+  vector<double> tstamps(simulation_time + 1);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -243,7 +243,7 @@ int main(int argc, char** argv)
   // start the time stepping
   if (time_flg) {
 
-      for (size_t it = 0; it < time; ++it)
+      for (size_t it = 0; it < simulation_time; ++it)
         {
           tstamps[it] = MPI_Wtime();
 
@@ -276,7 +276,7 @@ int main(int argc, char** argv)
       dset = H5Dcreate2(file, dname.c_str(), H5T_IEEE_F32LE, fspace, 
                         H5P_DEFAULT, dcpl, H5P_DEFAULT);
       assert(dset >= 0);
-      for (size_t it = 0; it < time; ++it)
+      for (size_t it = 0; it < simulation_time; ++it)
         {
           tstamps[it] = MPI_Wtime();
 
@@ -302,16 +302,16 @@ int main(int argc, char** argv)
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  tstamps[time] = MPI_Wtime();
+  tstamps[simulation_time] = MPI_Wtime();
 
   // print timings/throughput
-  size_t bytes_written = time * processor[0] * domain[0] * processor[1] *
+  size_t bytes_written = simulation_time * processor[0] * domain[0] * processor[1] *
     domain[1] *  processor[2] * domain[2] * sizeof(float);
 
-  if (rank == 0)
+  if (mpi_rank == 0)
     {
       cout << "Aggregate throughput:\t" << bytes_written /
-        (tstamps[time] - tstamps[0]) / ((double) (1<<20)) << " MB/s" <<
+        (tstamps[simulation_time] - tstamps[0]) / ((double) (1<<20)) << " MB/s" <<
         endl;
     }
 
