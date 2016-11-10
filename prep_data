@@ -1,0 +1,10 @@
+#!/bin/tcsh
+mkdir data
+lfs setstripe data -c 1
+cd data
+@ n = $1 - 1
+@ i = 0
+while ( $i <= $n )
+mkdir $i
+@ i = $i + 1
+end
