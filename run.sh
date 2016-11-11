@@ -59,4 +59,14 @@ time 3
 DONE
 EOF
 
+# scale chunk size isotropically 
+mpiexec -n 16 ./seism-core << EOF
+processor 4 2 2
+chunk 180 64 128
+domain 180 64 128
+time 3
+separate_timesteps
+DONE
+EOF
+
 

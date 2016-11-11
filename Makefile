@@ -1,13 +1,11 @@
 CXX=h5pcc
-CXXFLAGS=-Wall -O2
+CXXFLAGS=-Wall -O2 -std=c++0x
+#CXXFLAGS=-Wall -O0 -g -std=c++0x
 
 all: seism-core
 
-seism-core: seism-core.o parse_input.o
-	$(CXX) seism-core.o parse_input.o -o $@ -lstdc++
-
-parse_input.o: parse_input.cc
-	$(CXX) $(CXXFLAGS) -c $< -o $@ 
+seism-core: seism-core.o
+	$(CXX) $(CXXFLAGS) seism-core.o -o $@ -lstdc++
 
 seism-core.o: seism-core.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
