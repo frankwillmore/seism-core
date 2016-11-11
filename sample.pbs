@@ -1,0 +1,42 @@
+#!/bin/bash
+
+#PBS -l nodes=4:ppn=32:xe
+#PBS -l walltime=00:10:00
+#PBS -N scale
+#PBS -m abe
+#PBS -M frank.willmore@hdfgroup.org
+
+
+mkdir -p /scratch/sciteam/$USER/$PBS_JOBNAME
+cd /scratch/sciteam/$USER/$PBS_JOBNAME
+
+SEISM_CORE=/u/sciteam/willmore/seism-core/seism-core
+TIME_STEPS=10
+
+
+date
+
+#lfs setstripe --count 16 --size 94371840 seism-test.h5 
+
+export processors=64
+
+for i in {1..5}; do
+
+export `echo tput_$i`=`aprun -N32 -n64 $SEISM_CORE << EOF | grep throughput | awk '{print $3}' 
+processor 4 4 4
+chunk 360 128 128
+domain 180 128 128
+time $TIME_STEPS
+use_collective
+separate_timesteps
+DONE
+EOF`
+
+done
+
+printf "%d\t%g\t%g\t%g\t%g\t%g\n" $processors $tput_1 $tput_2 $tput_3 $tput_4 $tput_5 >> $PBS_JOBNAME.tsv
+
+
+date
+
+
