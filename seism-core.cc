@@ -101,9 +101,6 @@ int main(int argc, char** argv)
       cout << "Separate timesteps:\t" << time_flg << endl;
     }
 
-
-  coll_flg = (bool)mpi_collective_io_int;  // translate to boolean
-
   // create the fapl
   hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
   assert(fapl >= 0);
@@ -253,14 +250,12 @@ int main(int argc, char** argv)
           hid_t group = H5Gcreate(file, group_name.c_str(), H5P_DEFAULT, 
                                   H5P_DEFAULT, H5P_DEFAULT);
           assert(group >= 0);
-          assert(H5Gclose(group) >=0);
-          string dset_name = group_name + "/" + dname;
+
           // create a new dataset for each timestep
-          dset = H5Dcreate2(file, dset_name.c_str(), H5T_IEEE_F32LE, 
-                            fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+          dset = H5Dcreate(group, dname.c_str(), H5T_IEEE_F32LE, 
+                           fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
           assert(dset >= 0);
 
-          start[0] = (hsize_t) it;
           assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, 
                  count, block) >= 0);
 
@@ -268,13 +263,14 @@ int main(int argc, char** argv)
           assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxpl, &v[0]) 
                  >= 0);
 
+          assert(H5Gclose(group) >=0);
           assert(H5Dclose(dset) >= 0);
         } // next it
     }
   else  // time_flg not set
     {
       // create the dataset just once 
-      dset = H5Dcreate2(file, dname.c_str(), H5T_IEEE_F32LE, fspace, 
+      dset = H5Dcreate(file, dname.c_str(), H5T_IEEE_F32LE, fspace, 
                         H5P_DEFAULT, dcpl, H5P_DEFAULT);
       assert(dset >= 0);
       for (size_t it = 0; it < simulation_time; ++it)
