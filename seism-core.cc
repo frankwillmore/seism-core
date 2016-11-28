@@ -27,6 +27,7 @@
 #include <cassert>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <vector>
 
 using namespace std;
@@ -101,36 +102,19 @@ int main(int argc, char** argv)
       cout << "Separate timesteps:\t" << time_flg << endl;
     }
 
-  // create the fapl
-  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-  assert(fapl >= 0);
-
-  // use the latest file format
-  assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
-         0);
-
-  // use MPI-IO
-  assert(H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, MPI_INFO_NULL) >= 0);
-
-  // create the file
-  string fname = "seism-test.h5";
-  hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
-  assert(file >= 0);
-  assert(H5Pclose(fapl) >= 0);
-
 
   // create the dataspace, time dimension first!
   hsize_t n_dims = 4;
   hsize_t dims[n_dims];
 
-  if (time_flg) 
+  if (time_flg)
     {
       n_dims = 3;
       dims[0] = processor[0]*domain[0];
       dims[1] = processor[1]*domain[1];
       dims[2] = processor[2]*domain[2];
     }
-  else 
+  else
     {
       dims[0] = simulation_time;
       dims[1] = processor[0]*domain[0];
@@ -145,13 +129,13 @@ int main(int argc, char** argv)
   // set up chunking... NOTE: extent of time dimension is 1
   hsize_t cdims[n_dims];
 
-  if (time_flg) 
+  if (time_flg)
     {
       cdims[0] = chunk[0];
       cdims[1] = chunk[1];
       cdims[2] = chunk[2];
     }
-  else 
+  else
     {
       cdims[0] = 1;
       cdims[1] = chunk[0];
@@ -168,7 +152,7 @@ int main(int argc, char** argv)
   hsize_t start[4], block[4], count[4] = {1,1,1,1};
 
   // calculate offsets from MPI rank
-  if (time_flg) 
+  if (time_flg)
     {
       start[2] = (hsize_t) mpi_rank % processor[2];
       start[1] = (hsize_t) ((mpi_rank - start[2])/processor[2]) % processor[1];
@@ -182,7 +166,7 @@ int main(int argc, char** argv)
       block[1] = domain[1];
       block[2] = domain[2];
     }
-  else 
+  else
     {
       start[3] = (hsize_t) mpi_rank % processor[2];
       start[2] = (hsize_t) ((mpi_rank - start[3])/processor[2]) % processor[1];
@@ -198,24 +182,22 @@ int main(int argc, char** argv)
       block[3] = domain[2];
     }
 
-  
   // data transfer property list for collective I/O (optional)
   hid_t dxpl = H5P_DEFAULT;
-  if (coll_flg) 
+  if (coll_flg)
     {
       dxpl = H5Pcreate(H5P_DATASET_XFER);
       assert(H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE) >= 0);
     }
 
-
   // create in-memory dataspace
-  if (time_flg) 
+  if (time_flg)
     {
       dims[0] = domain[0];
       dims[1] = domain[1];
       dims[2] = domain[2];
-    } 
-  else 
+    }
+  else
     {
       dims[0] = 1;
       dims[1] = domain[0];
@@ -227,65 +209,114 @@ int main(int argc, char** argv)
   assert(mspace >= 0);
   assert(H5Sselect_all(mspace) >= 0);
 
-
   // initialize the test data to MPI rank
   vector<float> v((size_t) domain[0]*domain[1]*domain[2], (float) mpi_rank);
 
   vector<double> tstamps(simulation_time + 1);
+
+  // create the fapl
+  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+  assert(fapl >= 0);
+
+  // use the latest file format
+  assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
+         0);
+
+  // use MPI-IO
+  MPI_Info info;
+  assert(MPI_Info_create(&info) == MPI_SUCCESS);
+  assert(MPI_Info_set( info, "romio_cb_write", "enable" ) == MPI_SUCCESS);
+  assert(MPI_Info_set( info, "romio_ds_write", "disable" ) == MPI_SUCCESS);
+
+  ostringstream ost;
+  ost << v.size() * sizeof(float);
+  assert(MPI_Info_set( info, "cb_block_size", ost.str().c_str()) == MPI_SUCCESS);
+  assert(MPI_Info_set( info, "cb_buf_size", ost.str().c_str()) == MPI_SUCCESS);
+  ost.str("");
+  ost << mpi_size;
+  assert(MPI_Info_set( info, "cb_nodes", ost.str().c_str() ) == MPI_SUCCESS);
+  assert(H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, info) >= 0);
+
+  // create the file
+  string fname = "seism-test.h5";
+  hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+  assert(file >= 0);
+  assert(H5Pclose(fapl) >= 0);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
   string dname = "seism-data";
   hid_t dset; // dataset; will be created/destroyed within time loop or outside
 
+  // create an lcpl
+  hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
+  assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
+
   // start the time stepping
   if (time_flg) {
 
-      for (size_t it = 0; it < simulation_time; ++it)
-        {
-          tstamps[it] = MPI_Wtime();
+    assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL,
+                               count, block) >= 0);
 
-          // if storing timesteps separately, create a new group for each:
-          string group_name = "/" + padIntWithZeros(it, 6);
-          hid_t group = H5Gcreate(file, group_name.c_str(), H5P_DEFAULT, 
-                                  H5P_DEFAULT, H5P_DEFAULT);
-          assert(group >= 0);
+#ifdef PRE_CREATE
 
-          // create a new dataset for each timestep
-          dset = H5Dcreate(group, dname.c_str(), H5T_IEEE_F32LE, 
-                           fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
-          assert(dset >= 0);
+    for (size_t it = 0; it < simulation_time; ++it)
+      {
+        // if storing timesteps separately, create a new group for each:
+        string path = "/" + padIntWithZeros(it, 6) + "/" + dname;
 
-          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, 
-                 count, block) >= 0);
+        // create a new dataset for each timestep
+        dset = H5Dcreate(file, path.c_str(), H5T_IEEE_F32LE,
+                         fspace, lcpl, dcpl, H5P_DEFAULT);
+        assert(dset >= 0);
+        assert(H5Dclose(dset) >= 0);
+      }
 
-          // Write the data. dxpl was set to default or collective above
-          assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxpl, &v[0]) 
-                 >= 0);
+#endif
 
-          assert(H5Gclose(group) >=0);
-          assert(H5Dclose(dset) >= 0);
-        } // next it
-    }
+    for (size_t it = 0; it < simulation_time; ++it)
+      {
+        tstamps[it] = MPI_Wtime();
+
+        // if storing timesteps separately, create a new group for each:
+        string path = "/" + padIntWithZeros(it, 6) + "/" + dname;
+
+#ifndef PRE_CREATE
+        // create a new dataset for each timestep
+        dset = H5Dcreate(file, path.c_str(), H5T_IEEE_F32LE,
+                         fspace, lcpl, dcpl, H5P_DEFAULT);
+#else
+        // we've pre-created them and just need to open
+        dset = H5Dopen(file, path.c_str(), H5P_DEFAULT);
+#endif
+        assert(dset >= 0);
+
+        // Write the data. dxpl was set to default or collective above
+        assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxpl, &v[0])
+               >= 0);
+
+        assert(H5Dclose(dset) >= 0);
+      } // next it
+  }
   else  // time_flg not set
     {
-      // create the dataset just once 
-      dset = H5Dcreate(file, dname.c_str(), H5T_IEEE_F32LE, fspace, 
-                        H5P_DEFAULT, dcpl, H5P_DEFAULT);
+      // create the dataset just once
+      dset = H5Dcreate(file, dname.c_str(), H5T_IEEE_F32LE, fspace,
+                       H5P_DEFAULT, dcpl, H5P_DEFAULT);
       assert(dset >= 0);
       for (size_t it = 0; it < simulation_time; ++it)
         {
           tstamps[it] = MPI_Wtime();
 
           start[0] = (hsize_t) it;
-          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, 
-                 count, block) >= 0);
+          assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL,
+                                     count, block) >= 0);
           // Write the data. dxpl was set to default or collective above
-          assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxpl, &v[0]) 
+          assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxpl, &v[0])
                  >= 0);
 
         }
-        assert(H5Dclose(dset) >= 0);
+      assert(H5Dclose(dset) >= 0);
 
     } //end else
 
@@ -295,6 +326,7 @@ int main(int argc, char** argv)
   assert(H5Pclose(dxpl) >= 0);
   assert(H5Sclose(fspace) >= 0);
   assert(H5Pclose(dcpl) >= 0);
+  assert(H5Pclose(lcpl) >= 0);
   assert(H5Fclose(file) >= 0);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -302,8 +334,8 @@ int main(int argc, char** argv)
   tstamps[simulation_time] = MPI_Wtime();
 
   // print timings/throughput
-  size_t bytes_written = simulation_time * processor[0] * domain[0] * processor[1] *
-    domain[1] *  processor[2] * domain[2] * sizeof(float);
+  size_t bytes_written = simulation_time * processor[0] * domain[0] *
+    processor[1] * domain[1] *  processor[2] * domain[2] * sizeof(float);
 
   if (mpi_rank == 0)
     {
