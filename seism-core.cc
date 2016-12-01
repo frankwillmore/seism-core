@@ -32,14 +32,14 @@
 
 using namespace std;
 
-void precreate(hid_t file, string fname, hid_t fapl, unsigned int simulation_time, string dname, hid_t fspace, hid_t lcpl, hid_t dcpl, hid_t &dset )
+void precreate(hid_t file, unsigned int simulation_time, string dname, hid_t fspace, hid_t lcpl, hid_t dcpl)
 {
     for (unsigned int it = 0; it < simulation_time; ++it)
       {
         // if storing timesteps separately, create a new group for each:
         string path = "/" + padIntWithZeros(it, 6) + "/" + dname;
         // create a new dataset for each timestep
-        dset = H5Dcreate(file, path.c_str(), H5T_IEEE_F32LE,
+        hid_t dset = H5Dcreate(file, path.c_str(), H5T_IEEE_F32LE,
         fspace, lcpl, dcpl, H5P_DEFAULT);
         assert(dset >= 0);
         assert(H5Dclose(dset) >= 0);
@@ -304,7 +304,7 @@ int main(int argc, char** argv)
               //file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);      
               file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);      
               assert(file >= 0);
-              precreate(file, fname, fapl, simulation_time, dname, fspace, lcpl, dcpl, dset);
+              precreate(file, simulation_time, dname, fspace, lcpl, dcpl);
               assert(H5Fclose(file) >= 0); 
             }
           MPI_Barrier(MPI_COMM_WORLD);
@@ -315,7 +315,7 @@ int main(int argc, char** argv)
         { 
           file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);      
           assert(file >= 0);
-          precreate(file, fname, fapl, simulation_time, dname, fspace, lcpl, dcpl, dset);
+          precreate(file, simulation_time, dname, fspace, lcpl, dcpl);
         }
       else // no precreate, just open the file
         {
@@ -347,6 +347,7 @@ int main(int argc, char** argv)
           if (precreate_datasets == 0) dset = H5Dcreate(file, path.c_str(), H5T_IEEE_F32LE, fspace, lcpl, dcpl, H5P_DEFAULT);
           // we've pre-created datasets and just need to open
           else dset = H5Dopen(file, path.c_str(), H5P_DEFAULT);
+          assert(dset >= 0);
         }
       else  // time_flg not set, simpler case. just select the right hyperslab
         {
@@ -355,14 +356,12 @@ int main(int argc, char** argv)
 
         } //end else
 
-    assert(dset >= 0);
-
     // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
     // Write the dang data. 
     assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxpl, &v[0]) >= 0);
     // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-    //if (time_flg && !precreate_datasets) assert(H5Dclose(dset) >= 0);
+    //separate time steps requires closing each dataset 
     if (time_flg) assert(H5Dclose(dset) >= 0);
 
   } // next iteration 
