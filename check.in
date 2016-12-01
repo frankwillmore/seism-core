@@ -5,6 +5,7 @@ domain 180 128 128
 time 5
 use_collective
 separate_timesteps
+precreate_datasets -1
 DONE
 
 
