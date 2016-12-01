@@ -32,19 +32,31 @@
 
 using namespace std;
 
-void precreate(hid_t file, unsigned int simulation_time, string dname, hid_t fspace, hid_t lcpl, hid_t dcpl)
+////////////////////////////////////////////////////////////////////////////////
+
+void precreate(hid_t file, unsigned int simulation_time, string dname, hid_t fspace, hid_t lcpl, hid_t dcpl, bool separate_timesteps)
 {
-    for (unsigned int it = 0; it < simulation_time; ++it)
+    if (separate_timesteps)
       {
-        // if storing timesteps separately, create a new group for each:
-        string path = "/" + padIntWithZeros(it, 6) + "/" + dname;
-        // create a new dataset for each timestep
-        hid_t dset = H5Dcreate(file, path.c_str(), H5T_IEEE_F32LE,
-        fspace, lcpl, dcpl, H5P_DEFAULT);
+        for (unsigned int it = 0; it < simulation_time; ++it)
+          {
+            // if storing timesteps separately, create a new group for each:
+            string path = "/" + padIntWithZeros(it, 6) + "/" + dname;
+            // create a new dataset for each timestep
+            hid_t dset = H5Dcreate(file, path.c_str(), H5T_IEEE_F32LE, fspace, lcpl, dcpl, H5P_DEFAULT);
+            assert(dset >= 0);
+            assert(H5Dclose(dset) >= 0); 
+          }
+      }
+    else
+      {
+        hid_t dset = H5Dcreate(file, dname.c_str(), H5T_IEEE_F32LE, fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
         assert(dset >= 0);
         assert(H5Dclose(dset) >= 0);
       }
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 void setMPI_Info(size_t v_size, int mpi_size, hid_t fapl)
 {
@@ -78,7 +90,7 @@ int main(int argc, char** argv)
   string rest_of_line;
   unsigned int simulation_time, processor[3], chunk[3], domain[3];
   int mpi_collective_io_int = 0;
-  int separate_timesteps = 0;
+  int _separate_timesteps = 0;
   int precreate_datasets = 0; 
   // 0 --> don't precreate; -1 --> create collectively; 1 --> only rank 1 creates
 
@@ -100,7 +112,7 @@ int main(int argc, char** argv)
         if (!parameter.compare("use_collective"))
           mpi_collective_io_int = true;
         if (!parameter.compare("separate_timesteps"))
-          separate_timesteps = true;
+          _separate_timesteps = true;
         if (!parameter.compare("precreate_datasets"))
             cin >> precreate_datasets; 
         getline(cin, rest_of_line); // read the rest of the line
@@ -114,12 +126,12 @@ int main(int argc, char** argv)
   assert(MPI_Bcast(&domain, 3, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
   assert(MPI_Bcast(&mpi_collective_io_int, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
          MPI_SUCCESS);
-  assert(MPI_Bcast(&separate_timesteps, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+  assert(MPI_Bcast(&_separate_timesteps, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
          MPI_SUCCESS);
   assert(MPI_Bcast(&precreate_datasets, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
          MPI_SUCCESS);
   bool coll_flg = (bool)mpi_collective_io_int; // flg for collective I/O
-  bool time_flg = (bool)separate_timesteps; // flg for collective I/O
+  bool separate_timesteps = (bool)_separate_timesteps; // flg for collective I/O
 
   // check the arguments
   assert(time > 0);
@@ -139,7 +151,7 @@ int main(int argc, char** argv)
         " x " << chunk[2] << endl;
       cout << "Number of time steps:\t" << simulation_time << endl;
       cout << "Collective I/O:\t\t" << coll_flg << endl;
-      cout << "Separate timesteps:\t" << time_flg << endl;
+      cout << "Separate timesteps:\t" << separate_timesteps << endl;
       cout << "Pre-create datasets:\t" << precreate_datasets << endl;
     }
 
@@ -150,7 +162,7 @@ int main(int argc, char** argv)
   hsize_t n_dims = 4;
   hsize_t dims[n_dims];
 
-  if (time_flg)
+  if (separate_timesteps)
     {
       n_dims = 3;
       dims[0] = processor[0]*domain[0];
@@ -173,7 +185,7 @@ int main(int argc, char** argv)
   // set up chunking... NOTE: extent of time dimension is 1
   hsize_t cdims[n_dims];
 
-  if (time_flg)
+  if (separate_timesteps)
     {
       cdims[0] = chunk[0];
       cdims[1] = chunk[1];
@@ -197,7 +209,7 @@ int main(int argc, char** argv)
   hsize_t start[4], block[4], count[4] = {1,1,1,1};
 
   // calculate offsets from MPI rank
-  if (time_flg)
+  if (separate_timesteps)
     {
       start[2] = (hsize_t) mpi_rank % processor[2];
       start[1] = (hsize_t) ((mpi_rank - start[2])/processor[2]) % processor[1];
@@ -243,7 +255,7 @@ int main(int argc, char** argv)
 ////////////////////////////////////////////////////////////////////////////////
 
   // create in-memory dataspace
-  if (time_flg)
+  if (separate_timesteps)
     {
       dims[0] = domain[0];
       dims[1] = domain[1];
@@ -282,54 +294,51 @@ int main(int argc, char** argv)
   string fname = "seism-test.h5";
   hid_t file; 
 
-  //?MPI_Barrier(MPI_COMM_WORLD);
-
+  // name for dataset
   string dname = "seism-data";
-  hid_t dset; // dataset; will be created/destroyed within time loop or outside
+  hid_t dset=-1; // dataset; will be created/destroyed within time loop or outside
   string path;
 
   // create an lcpl
   hid_t lcpl = H5Pcreate(H5P_LINK_CREATE);
   assert(H5Pset_create_intermediate_group(lcpl, 1) >= 0);
 
+  MPI_Barrier(MPI_COMM_WORLD);
+
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
   // precreate datasets, as needed
-  if (time_flg) 
+  double start_precreate = MPI_Wtime();
+
+  if (precreate_datasets==1)
     {
-      if (precreate_datasets==1)
-        {
-          if (mpi_rank==0) // create with process 0, then close & re-open
-            { 
-              //file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);      
-              file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);      
-              assert(file >= 0);
-              precreate(file, simulation_time, dname, fspace, lcpl, dcpl);
-              assert(H5Fclose(file) >= 0); 
-            }
-          MPI_Barrier(MPI_COMM_WORLD);
-          file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl); // re-open collectively
-          assert (file >= 0);
-        }
-      else if (precreate_datasets==-1) // create collectively
+      if (mpi_rank==0) // create with process 0, then close & re-open
         { 
-          file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);      
+          //file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);      
+          file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);      
           assert(file >= 0);
-          precreate(file, simulation_time, dname, fspace, lcpl, dcpl);
+          precreate(file, simulation_time, dname, fspace, lcpl, dcpl, separate_timesteps);
+          assert(H5Fclose(file) >= 0); 
         }
-      else // no precreate, just open the file
-        {
-          file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);      
-          assert(file >= 0);
-        } 
+      MPI_Barrier(MPI_COMM_WORLD);
+      file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl); // re-open collectively
+      assert (file >= 0);
     }
-  else // no time_flag, so create the file and just the one dataset 
+  else if (precreate_datasets==-1) // create collectively, leave file open
+    { 
+      file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);      
+      assert(file >= 0);
+      precreate(file, simulation_time, dname, fspace, lcpl, dcpl, separate_timesteps);
+    }
+  else // no precreate, just open the file
     {
       file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);      
       assert(file >= 0);
-      dset = H5Dcreate(file, dname.c_str(), H5T_IEEE_F32LE, fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
-      assert(dset >= 0);
-    }
+    } 
+    
+  MPI_Barrier(MPI_COMM_WORLD);
+  double finish_precreate = MPI_Wtime();
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -340,7 +349,7 @@ int main(int argc, char** argv)
       tstamps[it] = MPI_Wtime();
 
       // get the appropriate dataset for how we're running
-      if (time_flg)
+      if (separate_timesteps)
         {
           // if storing timesteps separately, create a new group for each:
           string path = "/" + padIntWithZeros(it, 6) + "/" + dname;
@@ -349,40 +358,79 @@ int main(int argc, char** argv)
           else dset = H5Dopen(file, path.c_str(), H5P_DEFAULT);
           assert(dset >= 0);
         }
-      else  // time_flg not set, simpler case. just select the right hyperslab
+      else  // separate_timesteps not set, simpler case. just select the right hyperslab
         {
           start[0] = (hsize_t) it;
           assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, count, block) >= 0);
-
         } //end else
 
-    // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-    // Write the dang data. 
-    assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxpl, &v[0]) >= 0);
-    // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+      // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+      // Write the dang data. 
+      assert(H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxpl, &v[0]) >= 0);
+      // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-    //separate time steps requires closing each dataset 
-    if (time_flg) assert(H5Dclose(dset) >= 0);
+      //separate time steps requires closing each dataset 
+      if (separate_timesteps) assert(H5Dclose(dset) >= 0);
 
-  } // next iteration 
+    } // next iteration 
   
 ////////////////////////////////////////////////////////////////////////////////
-
-  // release open handles
-  if (!time_flg) assert(H5Dclose(dset) >= 0);
-  assert(H5Pclose(fapl) >= 0);
-  assert(H5Sclose(mspace) >= 0);
-  assert(H5Pclose(dxpl) >= 0);
-  assert(H5Sclose(fspace) >= 0);
-  assert(H5Pclose(dcpl) >= 0);
-  assert(H5Pclose(lcpl) >= 0);
-  assert(H5Fclose(file) >= 0);
+////////////////////////////////////////////////////////////////////////////////
 
   MPI_Barrier(MPI_COMM_WORLD);
+  double timestamp_0= MPI_Wtime();
+
+  // print timings/throughput
+  if (!separate_timesteps)
+    {
+      MPI_Barrier(MPI_COMM_WORLD);
+      double timestamp_0a = MPI_Wtime();
+      assert(H5Dclose(dset) >= 0);
+      MPI_Barrier(MPI_COMM_WORLD);
+      double timestamp_0b = MPI_Wtime();
+      if (mpi_rank == 0) cout << "Time to close dataset:\t" << (timestamp_0b - timestamp_0a) << endl;
+    }
+
+  assert(H5Pclose(fapl) >= 0);
+  MPI_Barrier(MPI_COMM_WORLD);
+  double timestamp_1 = MPI_Wtime();
+  if (mpi_rank == 0) cout << "Time to close fapl:\t" << (timestamp_1 - timestamp_0) << endl;
+
+  assert(H5Sclose(mspace) >= 0);
+  MPI_Barrier(MPI_COMM_WORLD);
+  double timestamp_2 = MPI_Wtime();
+  if (mpi_rank == 0) cout << "Time to close mspace:\t" << (timestamp_2 - timestamp_1) << endl;
+
+  assert(H5Pclose(dxpl) >= 0);
+  MPI_Barrier(MPI_COMM_WORLD);
+  double timestamp_3 = MPI_Wtime();
+  if (mpi_rank == 0) cout << "Time to close dxpl:\t" << (timestamp_3 - timestamp_2) << endl;
+
+  assert(H5Sclose(fspace) >= 0);
+  MPI_Barrier(MPI_COMM_WORLD);
+  double timestamp_4 = MPI_Wtime();
+  if (mpi_rank == 0) cout << "Time to close fspace:\t" << (timestamp_4 - timestamp_3) << endl;
+
+  assert(H5Pclose(dcpl) >= 0);
+  MPI_Barrier(MPI_COMM_WORLD);
+  double timestamp_5 = MPI_Wtime();
+  if (mpi_rank == 0) cout << "Time to close dcpl:\t" << (timestamp_5 - timestamp_4) << endl;
+
+  assert(H5Pclose(lcpl) >= 0);
+  MPI_Barrier(MPI_COMM_WORLD);
+  double timestamp_6 = MPI_Wtime();
+  if (mpi_rank == 0) cout << "Time to close lcpl:\t" << (timestamp_6 - timestamp_5) << endl;
+
+  assert(H5Fclose(file) >= 0);
+  MPI_Barrier(MPI_COMM_WORLD);
+  double timestamp_7 = MPI_Wtime();
+  if (mpi_rank == 0) cout << "Time to close file:\t" << (timestamp_7 - timestamp_6) << endl;
 
   tstamps[simulation_time] = MPI_Wtime();
 
-  // print timings/throughput
+  if (mpi_rank == 0) cout << "Time in write loop:\t" << (timestamp_0 - tstamps[0]) << " MB/s" << endl;
+  if (mpi_rank == 0) if (precreate_datasets) cout << "Time to precreate:\t" << (finish_precreate - start_precreate)  << endl;
+
   size_t bytes_written = simulation_time * processor[0] * domain[0] *
     processor[1] * domain[1] *  processor[2] * domain[2] * sizeof(float);
 
