@@ -340,6 +340,9 @@ int main(int argc, char** argv)
   MPI_Barrier(MPI_COMM_WORLD);
   double finish_precreate = MPI_Wtime();
 
+  // if using separate timesteps, open the one dataset which was precreated
+  // if (!separate_timesteps) dset = H5Dopen(file, dname.c_str(), H5P_DEFAULT);
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -362,6 +365,13 @@ int main(int argc, char** argv)
         {
           start[0] = (hsize_t) it;
           assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, count, block) >= 0);
+          // if we haven't already created the dataset, do it now
+          if (dset == -1)
+            {
+                if (precreate_datasets == 0) dset = H5Dcreate(file, dname.c_str(), H5T_IEEE_F32LE, fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+                else dset = H5Dopen(file, dname.c_str(), H5P_DEFAULT);
+            }
+
         } //end else
 
       // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
