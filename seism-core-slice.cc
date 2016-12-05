@@ -31,7 +31,6 @@
 
 using namespace std;
 
-#define CONTIG_DSET_NAME "contiguous"
 #define CHUNKED_DSET_NAME "chunked"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -49,12 +48,8 @@ void precreate_0
          0);
   hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
   assert(file >= 0);
-  hid_t dset = H5Dcreate(file, CONTIG_DSET_NAME, H5T_IEEE_F32LE, fspace,
-                          H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  assert(dset >= 0);
-  assert(H5Dclose(dset) >= 0);
-  dset = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
-                   H5P_DEFAULT, dcpl, H5P_DEFAULT);
+  hid_t dset = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
+                         H5P_DEFAULT, dcpl, H5P_DEFAULT);
   assert(dset >= 0);
   assert(H5Dclose(dset) >= 0);
   assert(H5Fclose(file) >= 0);
@@ -71,11 +66,11 @@ void setMPI_Info(MPI_Info& info, const size_t& v_size, int mpi_size)
 
   ostringstream ost;
   ost << v_size * sizeof(float);
-  assert(MPI_Info_set( info, "cb_block_size", ost.str().c_str()) == MPI_SUCCESS);
+  //assert(MPI_Info_set( info, "cb_block_size", ost.str().c_str()) == MPI_SUCCESS);
   assert(MPI_Info_set( info, "cb_buf_size", ost.str().c_str()) == MPI_SUCCESS);
   ost.str("");
   ost << mpi_size;
-  assert(MPI_Info_set( info, "cb_nodes", ost.str().c_str() ) == MPI_SUCCESS);
+  //assert(MPI_Info_set( info, "cb_nodes", ost.str().c_str() ) == MPI_SUCCESS);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -154,7 +149,7 @@ int main(int argc, char** argv)
       cout << "Collective I/O:\t\t" << coll_flg << endl;
       cout << "Pre-create:\t\t" << pre_flg << endl;
       cout << endl;
-    } 
+    }
 
   //////////////////////////////////////////////////////////////////////////////
   // create the fle dataspace, time dimension first!
@@ -244,7 +239,7 @@ int main(int argc, char** argv)
 
   // file handle and name for file which will be created
   string fname = "seism-test.h5";
-  hid_t file, dset_chunked, dset_contig;
+  hid_t file, dset_chunked;
 
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -262,8 +257,6 @@ int main(int argc, char** argv)
       MPI_Barrier(MPI_COMM_WORLD);
       file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl);
       assert (file >= 0);
-      dset_contig = H5Dopen(file, CONTIG_DSET_NAME, H5P_DEFAULT);
-      assert(dset_contig >= 0);
       dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, H5P_DEFAULT);
       assert(dset_chunked >= 0);
     }
@@ -271,9 +264,6 @@ int main(int argc, char** argv)
     {
       file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
       assert(file >= 0);
-      dset_contig = H5Dcreate(file, CONTIG_DSET_NAME, H5T_IEEE_F32LE, fspace,
-                              H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-      assert(dset_contig >= 0);
       dset_chunked = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
                                H5P_DEFAULT, dcpl, H5P_DEFAULT);
       assert(dset_chunked >= 0);
@@ -285,19 +275,8 @@ int main(int argc, char** argv)
   //////////////////////////////////////////////////////////////////////////////
   // write the contiguous dataset
 
-  double start_contig = MPI_Wtime();
-
-  for (size_t it = 0; it < simulation_time; ++it)
-    {
-      start[0] = (hsize_t) it;
-      assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, count,
-                                 block) >= 0);
-      assert(H5Dwrite(dset_contig, H5T_NATIVE_FLOAT, mspace, fspace, dxpl,
-                      &v[0]) >= 0);
-    }
-
   MPI_Barrier(MPI_COMM_WORLD);
-  double stop_contig = MPI_Wtime();
+  double start_chunked = MPI_Wtime();
 
   // write the chunked dataset
   for (size_t it = 0; it < simulation_time; ++it)
@@ -315,7 +294,6 @@ int main(int argc, char** argv)
   //////////////////////////////////////////////////////////////////////////////
 
   assert(H5Dclose(dset_chunked) >= 0);
-  assert(H5Dclose(dset_contig) >= 0);
   assert(H5Pclose(fapl) >= 0);
   assert(H5Sclose(mspace) >= 0);
   assert(H5Pclose(dxpl) >= 0);
@@ -332,23 +310,26 @@ int main(int argc, char** argv)
 
   if (mpi_rank == 0)
     {
-      cout << "(Pre-)create/open:\t" <<
-        (stop_create - start_create) << " s"<< endl;
-      cout << "Contiguous write:\t" <<
-        (stop_contig - start_contig) << " s" << endl;
-      cout << "Chunked write:\t\t" <<
-        (stop_chunked - stop_contig) << " s" << endl;
-      cout << "Close file:\t\t" << (fclose_stop - fclose_start) << " s"
-           << endl;
-
       size_t bytes_written = simulation_time * processor[0] * domain[0] *
         processor[1] * domain[1] *  processor[2] * domain[2] * sizeof(float);
 
-      cout << "\nContiguous throughput:\t" << bytes_written /
-        (stop_contig - start_contig) / ((double) (1<<20)) << " MB/s"
+      if (pre_flg)
+        {
+          cout << "Pre-c";
+        }
+      else
+        {
+          cout << "C";
+        }
+      cout << "reate/open:\t";
+      if (!pre_flg) { cout << "\t";}
+      cout << (stop_create - start_create) << " s" << endl;
+      cout << "Write:\t\t\t" <<
+        (stop_chunked - start_chunked) << " s" << endl;
+      cout << "Write throughput:\t" << bytes_written /
+        (stop_chunked - start_chunked) / ((double) (1<<20)) << " MB/s"
            << endl;
-      cout << "Chunked throughput:\t" << bytes_written /
-        (stop_chunked - stop_contig) / ((double) (1<<20)) << " MB/s"
+      cout << "Close file:\t\t" << (fclose_stop - fclose_start) << " s"
            << endl;
       cout << "Aggregate throughput:\t" << bytes_written /
         (fclose_stop - begin) / ((double) (1<<20)) << " MB/s"
