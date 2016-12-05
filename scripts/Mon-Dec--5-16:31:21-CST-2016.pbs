@@ -1,0 +1,35 @@
+#!/bin/bash
+
+#PBS -l nodes=96:ppn=32:xe
+#PBS -l walltime=06:00:00
+#PBS -N 100M-slice
+#PBS -m abe
+#PBS -M frank.willmore@hdfgroup.org
+
+# load geometry function
+. processor_geometry.sh
+
+SEISM_CORE=/u/sciteam/willmore/seism-core/seism-core-slice
+TIME_STEPS=5
+
+for config in "8 8" "8 16" "8 32" "8 64" "8 128" "8 256" "8 512" "8 1024" 
+do
+
+ppn=`echo $config | awk '{print $1}'`
+processors=`echo $config | awk '{print $2}'`
+p_geom=`processor_geometry $processors` 
+
+printf "###%d\t processors" $processors 
+printf "\n"
+
+aprun -N$ppn -n$processors $SEISM_CORE << EOF 
+processor $p_geom
+chunk 160 80 2048
+domain 160 80 2048
+time $TIME_STEPS
+DONE
+EOF
+
+#done with this processor configuration
+done
+
