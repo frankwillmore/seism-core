@@ -255,10 +255,15 @@ int main(int argc, char** argv)
           precreate_0(fname, fspace, dcpl);
         }
       MPI_Barrier(MPI_COMM_WORLD);
+      double create_1 = MPI_Wtime();
       file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl);
       assert (file >= 0);
+      MPI_Barrier(MPI_COMM_WORLD);
+      double create_2 = MPI_Wtime();
       dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, H5P_DEFAULT);
       assert(dset_chunked >= 0);
+      MPI_Barrier(MPI_COMM_WORLD);
+      double create_3 = MPI_Wtime();
     }
   else
     {
@@ -321,9 +326,12 @@ int main(int argc, char** argv)
         {
           cout << "C";
         }
-      cout << "reate/open:\t";
+      cout << "Create/open:\t";
       if (!pre_flg) { cout << "\t";}
       cout << (stop_create - start_create) << " s" << endl;
+      cout << "Time in precreate_0():\t"  << (create_1 - start_create) << " s" << endl;
+      cout << "Time in H5Fopen():\t"  << (create_2 - create_1) << " s" << endl;
+      cout << "Time in H5Dopen():\t"  << (create_3 - create_2) << " s" << endl;
       cout << "Write:\t\t\t" <<
         (stop_chunked - start_chunked) << " s" << endl;
       cout << "Write throughput:\t" << bytes_written /
