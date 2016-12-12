@@ -2,8 +2,8 @@
 !> @author Donated
 !> @brief Program to mimic IO patterns in a large-scale simulation code.
 !!
-!! This code writes/reads 3D datasets using the strategies employed by the
-!! a user group on Blue Waters. In the code a 3D dataset is partitioned among
+!! This code writes/reads 3D datasets using the strategies employed by a user
+!! group on Blue Waters. In the code a 3D dataset is partitioned among
 !! MPI processors arranged in a 3D domain decomposition. To limit the number of
 !! files used to store the dataset, we write data collectively using parallel
 !! HDF5 in one computational direction. This effectively collapses the process
@@ -36,7 +36,12 @@
 !! the VDS to access their data from the pencil files.
 !!
 !! The kernel code is set up with parameters provided by the file "input". An
-!! example file is shown below:
+!! example file is shown below.
+!!
+!! UPDATE 2016-12-11: Writing now controlled by input flag. This will allow us
+!! to conduct tests in which we read on a different number of processors than
+!! were used to write the data. Also added chunking dimensions as an input
+!! parameter to add more flexibility in how we can write out data.
 !!
 !!      nx,ny,nz,ng
 !!         128,256,512,2
@@ -44,6 +49,10 @@
 !!         2,16,4
 !!      relay,relay size
 !!         1,32
+!!      write flag
+!!         1
+!!      chunk dims
+!!         -1,-1,-1
 !!
 !! Description of input parameters:
 !!
@@ -60,6 +69,9 @@
 !!       processors that are allowed to simultaneously read data. This must be a
 !!       factor of the total process count (e.g., with 16 MPI processors a
 !!       relay_size of 4 is acceptable, but 7 is not).
+!!    write flag: 0 to turn off writing, anything else to turn on writing
+!!    chunk dims: chunking dimensions when writing out datasets. set any to -1
+!!       deactivate manual chunking and use the default options.
 !!
 !! Important notes to users:
 !!
@@ -91,17 +103,10 @@
 !!    - We've only tested this code using powers of 2 for the grid extents and
 !!      process counts in each direction.
 !!
-!! TODO:
-!!
-!!    - We should add the capability to change the process layout when reading
-!!      data back in. This could be used to assess the performance of different
-!!      chunking patterns in the HDF5 dataset files.
-!!
 PROGRAM KERNEL
 
 ! Required modules.
 USE ISO_FORTRAN_ENV
-USE ISO_C_BINDING
 USE MPI
 USE HDF5
 USE IO
@@ -121,6 +126,11 @@ INTEGER :: nx,ny,nz,ng
 INTEGER :: iprc,jprc,kprc
 !> Used to control the relay scheme when reading in data.
 INTEGER :: relay,relay_size
+!> Used to control if data is written out.
+INTEGER :: write_flag
+!> Used to control chunking parameters in HDF5 datasets.
+INTEGER,DIMENSION(3) :: chunk_in
+INTEGER(KIND=HSIZE_T),DIMENSION(3) :: chunk_h5
 
 ! MPI related variables.
 !
@@ -136,7 +146,7 @@ INTEGER :: io_nprc,io_rank
 INTEGER :: MPIREAL
 !> Miscellaneous variables used during MPI setup.
 INTEGER :: rank_tmp,color
-INTEGER,DIMENSION(9) :: ibuff
+INTEGER,DIMENSION(10) :: ibuff
 
 ! Other program variables.
 !
@@ -182,6 +192,10 @@ IF (rank .EQ. 0) THEN
       READ(iounit,*) iprc,jprc,kprc
       READ(iounit,*)
       READ(iounit,*) relay,relay_size
+      READ(iounit,*)
+      READ(iounit,*) write_flag
+      READ(iounit,*)
+      READ(iounit,*) (chunk_in(i),i=1,3)
       CLOSE(UNIT=iounit)
       !
       WRITE(*,200) 'USER INPUTS TO CODE'
@@ -194,6 +208,8 @@ IF (rank .EQ. 0) THEN
       WRITE(*,250) '     KPROC=',kprc
       WRITE(*,250) '     RELAY=',relay
       WRITE(*,250) 'RELAY SIZE=',relay_size
+      WRITE(*,250) 'WRITE FLAG=',write_flag
+      WRITE(*,260) 'CHUNK DIMS=',(chunk_in(i),i=1,3)
       !
       ! Check if the number of processors matches the user's request.
       IF (iprc*jprc*kprc .NE. nprc) THEN
@@ -214,11 +230,12 @@ IF (rank .EQ. 0) THEN
    END IF
    !
    ! Pack buffer for broadcast.
-   ibuff(:) = [nx,ny,nz,ng,iprc,jprc,kprc,relay,relay_size]
+   ibuff(:) = [nx,ny,nz,ng,iprc,jprc,kprc,relay,relay_size,write_flag]
 END IF
 !
 ! Root broadcasts input variables to other processors.
-CALL MPI_BCAST(ibuff,9,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+CALL MPI_BCAST(ibuff,10,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+CALL MPI_BCAST(chunk_in,3,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 nx = ibuff(1)
 ny = ibuff(2)
 nz = ibuff(3)
@@ -228,6 +245,8 @@ jprc = ibuff(6)
 kprc = ibuff(7)
 relay = ibuff(8)
 relay_size = ibuff(9)
+write_flag = ibuff(10)
+chunk_h5 = INT(chunk_in,HSIZE_T)
 
 ! Set the 3D process layout. We do not use Cartesian communicator routines
 ! because they have row-major ordering.
@@ -268,36 +287,38 @@ CALL MPI_COMM_SPLIT(MPI_COMM_WORLD,color,rank,io_comm,ierr)
 CALL MPI_COMM_RANK(io_comm,io_rank,ierr)
 CALL MPI_COMM_SIZE(io_comm,io_nprc,ierr)
 
-! Initialize the variable to be written. Try to make the signal such that if
-! data is written/read to/from the wrong place we can see that there was an
-! error. We initialize the entire array to some fixed value before setting
-! the signal to make sure that the ghost layers have some known value.
+! Memory allocation for signal.
 ALLOCATE(phi(-ng+1:nxp+ng,-ng+1:nyp+ng,-ng+1:nzp+ng))
 phi(:,:,:) = 0.0_RWP
-!
+
+! Grid spacing of physical grid. Used to set up and later check the signal.
 dx = 2.0_RWP*PI/REAL(nx,RWP)
 dy = 2.0_RWP*PI/REAL(ny,RWP)
 dz = 2.0_RWP*PI/REAL(nz,RWP)
-!
-! Only loop over the physical portion of the arrays (not the ghost layers).
-DO k = 1,nzp
-   zloc = REAL(kst+k-1,RWP)*dz
-   DO j = 1,nyp
-      yloc = REAL(jst+j-1,RWP)*dy
-      DO i = 1,nxp
-         xloc = REAL(ist+i-1,RWP)*dx
-         !
-         phi(i,j,k) = xloc + 7.0_RWP*yloc + 23.0_RWP*zloc + &
-                      COS(3.0_RWP*xloc)*SIN(5.0_RWP*yloc)*COS(zloc)
+
+! Write out data to file, if requested.
+IF (write_flag .NE. 0) THEN
+   !
+   ! Only loop over the physical portion of the arrays (not the ghost layers).
+   DO k = 1,nzp
+      zloc = REAL(kst+k-1,RWP)*dz
+      DO j = 1,nyp
+         yloc = REAL(jst+j-1,RWP)*dy
+         DO i = 1,nxp
+            xloc = REAL(ist+i-1,RWP)*dx
+            !
+            phi(i,j,k) = xloc + 7.0_RWP*yloc + 23.0_RWP*zloc + &
+                         COS(3.0_RWP*xloc)*SIN(5.0_RWP*yloc)*COS(zloc)
+         END DO
       END DO
    END DO
-END DO
+   !
+   ! Write out the checkpoint.
+   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+   CALL WRITE_CHECKPOINT_2D(phi)
+END IF
 
-! Write out the checkpoint.
-CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-CALL WRITE_CHECKPOINT_2D(phi)
-
-! Reset phi with some garbage values before reading the dataset from file.
+! Set phi with some garbage values before reading the dataset from file.
 phi(:,:,:) = -1.37_RWP
 
 ! Read in the checkpoint using the VDS.
@@ -344,6 +365,7 @@ CALL MPI_FINALIZE(ierr)
 ! IO formatting.
 200 FORMAT (A)
 250 FORMAT (3X,A,1X,I4)
+260 FORMAT (3X,A,1X,3I4)
 300 FORMAT (A,1X,ES12.5)
 400 FORMAT (A,1X,I6,1X,A,3I4)
 
@@ -362,6 +384,7 @@ CONTAINS
 !!
 !> @param[in] buf Array under the 3D process decomposition to write out.
 SUBROUTINE WRITE_CHECKPOINT_2D(buf)
+   USE ISO_C_BINDING,ONLY: C_LOC
    IMPLICIT NONE
    ! Calling arguments.
    REAL(KIND=RWP),DIMENSION(-ng+1:nxp+ng,-ng+1:nyp+ng,-ng+1:nzp+ng), &
@@ -384,7 +407,7 @@ SUBROUTINE WRITE_CHECKPOINT_2D(buf)
    ! HDF5 dataset identifiers.
    INTEGER(KIND=HID_T) :: dset_id
    ! HDF5 precision type corresponding to the Fortran precision being used.
-   INTEGER(KIND=HID_T) :: h5prec
+   INTEGER(KIND=HID_T) :: h5_real
    ! Number of files that will be written.
    INTEGER :: nfiles
    ! File name for each i_world communicator.
@@ -411,8 +434,8 @@ SUBROUTINE WRITE_CHECKPOINT_2D(buf)
    ! Initialize the Fortran HDF5 interface.
    CALL H5OPEN_F(ierr)
 
-   ! Determine the HDF5 precision corresponding to real precision in code.
-   h5prec = H5KIND_TO_TYPE(RWP,H5_REAL_KIND)
+   ! Determine HDF5 types corresponding to precisions used in the code.
+   h5_real = H5KIND_TO_TYPE(RWP,H5_REAL_KIND)
 
    ! Set up file access property list with parallel I/O access.
    info = MPI_INFO_NULL
@@ -437,19 +460,19 @@ SUBROUTINE WRITE_CHECKPOINT_2D(buf)
    CALL H5PCLOSE_F(plist_id, ierr)
 
    ! Write attributes summarizing data and simulation setup and testing date.
-   CALL WRITE_ATTRIBUTE(file_id,'NPRC',nprc)
-   CALL WRITE_ATTRIBUTE(file_id,'IPRC',iprc)
-   CALL WRITE_ATTRIBUTE(file_id,'JPRC',jprc)
-   CALL WRITE_ATTRIBUTE(file_id,'KPRC',kprc)
-   CALL WRITE_ATTRIBUTE(file_id,'NX',nx)
-   CALL WRITE_ATTRIBUTE(file_id,'NY',ny)
-   CALL WRITE_ATTRIBUTE(file_id,'NZ',nz)
-   CALL WRITE_ATTRIBUTE(file_id,'NG',ng)
-   CALL WRITE_ATTRIBUTE(file_id,'JPID',jpid)
-   CALL WRITE_ATTRIBUTE(file_id,'KPID',kpid)
+   CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'NPRC',C_LOC(nprc))
+   CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'IPRC',C_LOC(iprc))
+   CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'JPRC',C_LOC(jprc))
+   CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'KPRC',C_LOC(kprc))
+   CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'NX',C_LOC(nx))
+   CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'NY',C_LOC(ny))
+   CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'NZ',C_LOC(nz))
+   CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'NG',C_LOC(ng))
+   CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'JPID',C_LOC(jpid))
+   CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'KPID',C_LOC(kpid))
    CALL DATE_AND_TIME(DATE=date,TIME=clock)
    CALL WRITE_ATTRIBUTE(file_id,'DATE',date)
-   CALL WRITE_ATTRIBUTE(file_id,'CLOCK',clock)
+   CALL WRITE_ATTRIBUTE(file_id,'TIME',clock)
 
    ! Memory size and offsets for the data on this process.
    dimT_proc = [INT(nxp+2*ng,HSIZE_T), &
@@ -463,8 +486,16 @@ SUBROUTINE WRITE_CHECKPOINT_2D(buf)
    oset_comm = [INT(ist,HSIZE_T),0_HSIZE_T,0_HSIZE_T]
    !
    ! Write out the scalar field in parallel.
-   CALL WRITE_DATA_PARALLEL(file_id,'PHI',dimT_proc,dimW_proc,oset_proc, &
-                            dimT_comm,oset_comm,buf)
+   IF (ANY(chunk_in .LT. 0)) THEN
+      CALL WRITE_DATA_PARALLEL(3,'PHI',file_id,h5_real,h5_real, &
+                               dimT_proc,dimW_proc,oset_proc, &
+                               dimT_comm,oset_comm,C_LOC(buf))
+   ELSE
+      CALL WRITE_DATA_PARALLEL(3,'PHI',file_id,h5_real,h5_real, &
+                               dimT_proc,dimW_proc,oset_proc, &
+                               dimT_comm,oset_comm,C_LOC(buf), &
+                               chunk=chunk_h5)
+   END IF
 
    ! Close the HDF5 file.
    CALL H5FCLOSE_F(file_id,ierr)
@@ -477,17 +508,17 @@ SUBROUTINE WRITE_CHECKPOINT_2D(buf)
       CALL H5FCREATE_F(TRIM(fname),H5F_ACC_TRUNC_F,file_id,ierr)
 
       ! Add standard attributes for this dataset.
-      CALL WRITE_ATTRIBUTE(file_id,'NPRC',nprc)
-      CALL WRITE_ATTRIBUTE(file_id,'IPRC',iprc)
-      CALL WRITE_ATTRIBUTE(file_id,'JPRC',jprc)
-      CALL WRITE_ATTRIBUTE(file_id,'KPRC',kprc)
-      CALL WRITE_ATTRIBUTE(file_id,'NX',nx)
-      CALL WRITE_ATTRIBUTE(file_id,'NY',ny)
-      CALL WRITE_ATTRIBUTE(file_id,'NZ',nz)
-      CALL WRITE_ATTRIBUTE(file_id,'NG',ng)
+      CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'NPRC',C_LOC(nprc))
+      CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'IPRC',C_LOC(iprc))
+      CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'JPRC',C_LOC(jprc))
+      CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'KPRC',C_LOC(kprc))
+      CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'NX',C_LOC(nx))
+      CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'NY',C_LOC(ny))
+      CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'NZ',C_LOC(nz))
+      CALL WRITE_ATTRIBUTE(file_id,H5T_NATIVE_INTEGER,'NG',C_LOC(ng))
       CALL DATE_AND_TIME(DATE=date,TIME=clock)
       CALL WRITE_ATTRIBUTE(file_id,'DATE',date)
-      CALL WRITE_ATTRIBUTE(file_id,'CLOCK',clock)
+      CALL WRITE_ATTRIBUTE(file_id,'TIME',clock)
 
       ! Create the dataspace for the virtual dataset.
       dimT_vds = [INT(nx,HSIZE_T),INT(ny,HSIZE_T),INT(nz,HSIZE_T)]
@@ -495,7 +526,7 @@ SUBROUTINE WRITE_CHECKPOINT_2D(buf)
       !
       ! VDS creation property list.
       CALL H5PCREATE_F(H5P_DATASET_CREATE_F,plist_id,ierr)
-      CALL H5PSET_FILL_VALUE_F(plist_id,h5prec,-999.999_RWP,ierr)
+      CALL H5PSET_FILL_VALUE_F(plist_id,h5_real,-999.999_RWP,ierr)
       !
       ! The dataspace for all files (source dataspaces) is the same.
       CALL H5SCREATE_SIMPLE_F(3,dimT_comm,srcspc_id,ierr)
@@ -528,7 +559,7 @@ SUBROUTINE WRITE_CHECKPOINT_2D(buf)
       END DO
 
       ! Now that the mapping is complete, create the VDS.
-      CALL H5DCREATE_F(file_id,'PHI',h5prec,vspace_id,dset_id,ierr,plist_id)
+      CALL H5DCREATE_F(file_id,'PHI',h5_real,vspace_id,dset_id,ierr,plist_id)
 
       ! Close the dataset.
       CALL H5DCLOSE_F(dset_id,ierr)
@@ -574,6 +605,7 @@ END SUBROUTINE WRITE_CHECKPOINT_2D
 !> @param[in,out] buf Array to hold the data.
 !> @param[in,optional] relay Parameter to indicate if the relay scheme is used.
 SUBROUTINE READ_CHECKPOINT_VDS(path,num,buf,relay)
+   USE ISO_C_BINDING,ONLY: C_LOC
    IMPLICIT NONE
    ! Calling arguments.
    CHARACTER(LEN=*),INTENT(IN) :: path
@@ -584,6 +616,10 @@ SUBROUTINE READ_CHECKPOINT_VDS(path,num,buf,relay)
    ! Local variables.
    ! HDF5 identifier for the file.
    INTEGER(KIND=HID_T) :: file_id
+   ! HDF5 precision type corresponding to the Fortran precision being used.
+   INTEGER(KIND=HID_T) :: h5_real
+   ! Pointer to the buffer array.
+   TYPE(C_PTR) :: buf_ptr
    ! Name of the HDF5 file.
    CHARACTER(LEN=FILE_NAME_LENGTH) :: fname
    ! Arrays for holding sizes of arrays in memory and in the file.
@@ -596,8 +632,6 @@ SUBROUTINE READ_CHECKPOINT_VDS(path,num,buf,relay)
    LOGICAL :: relay_flag
    ! Error handling.
    INTEGER :: ierr
-   TYPE(C_PTR) :: f_ptr
-   INTEGER(HID_T) :: h5prec
 
    ! Handle optional arguments.
    IF (PRESENT(relay)) THEN
@@ -611,6 +645,9 @@ SUBROUTINE READ_CHECKPOINT_VDS(path,num,buf,relay)
 
    ! Open the Fortran HDF5 interface.
    CALL H5OPEN_F(ierr)
+
+   ! Determine HDF5 types corresponding to precisions used in the code.
+   h5_real = H5KIND_TO_TYPE(RWP,H5_REAL_KIND)
 
    ! Open up the HDF5 file.
    CALL FILE_NAME(TRIM(ADJUSTL(path)),'DATA',num,fname)
@@ -631,9 +668,9 @@ SUBROUTINE READ_CHECKPOINT_VDS(path,num,buf,relay)
    oset_read = [INT(ist,HSIZE_T),INT(jst,HSIZE_T),INT(kst,HSIZE_T)]
 
    ! Read in the data for this process.
-   f_ptr = C_LOC(buf)
-   CALL READ_DATA(file_id,dims_buff,f_ptr,H5KIND_TO_TYPE(RWP, H5_REAL_KIND), &
-        'PHI',dims_read,oset_read,oset_buff)
+   buf_ptr = C_LOC(buf)
+   CALL READ_DATA(3,'PHI',file_id,h5_real,dims_buff,dims_read, &
+                  oset_buff,oset_read,buf_ptr)
 
    ! Close the HDF5 file.
    CALL H5FCLOSE_F(file_id,ierr)
