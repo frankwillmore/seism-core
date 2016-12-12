@@ -247,6 +247,7 @@ int main(int argc, char** argv)
 
   // precreate datasets, as needed
   double start_create = MPI_Wtime();
+  double create_1, create_2, create_3;
 
   if (pre_flg)
     {
@@ -255,15 +256,15 @@ int main(int argc, char** argv)
           precreate_0(fname, fspace, dcpl);
         }
       MPI_Barrier(MPI_COMM_WORLD);
-      double create_1 = MPI_Wtime();
+      create_1 = MPI_Wtime();
       file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl);
       assert (file >= 0);
       MPI_Barrier(MPI_COMM_WORLD);
-      double create_2 = MPI_Wtime();
+      create_2 = MPI_Wtime();
       dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, H5P_DEFAULT);
       assert(dset_chunked >= 0);
       MPI_Barrier(MPI_COMM_WORLD);
-      double create_3 = MPI_Wtime();
+      create_3 = MPI_Wtime();
     }
   else
     {
