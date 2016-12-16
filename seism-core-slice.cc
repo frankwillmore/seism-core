@@ -46,6 +46,12 @@ void precreate_0
   assert(fapl >= 0);
   assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
          0);
+
+#if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
+  assert(H5Pset_all_coll_metadata_ops(fapl, true) >=0 );
+  printf("Precreate_0 setting all_coll_meta_data_ops true\n");
+#endif
+
   hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
   assert(file >= 0);
   hid_t dset = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,

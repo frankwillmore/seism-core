@@ -1,0 +1,29 @@
+#!/bin/bash
+
+#PBS -l nodes=4:ppn=32:xe
+#PBS -l walltime=00:10:00
+#PBS -N scale
+#PBS -m abe
+#PBS -M frank.willmore@hdfgroup.org
+
+SEISM_CORE=/u/sciteam/willmore/seism-core/seism-core-slice
+TIME_STEPS=5
+
+date
+
+for i in {1..5}; do
+
+aprun -N8 -n16 $SEISM_CORE << EOF 
+processor 2 2 4
+chunk 360 128 128
+domain 360 128 128
+time $TIME_STEPS
+use_collective
+precreate
+DONE
+EOF
+
+done
+
+
+
