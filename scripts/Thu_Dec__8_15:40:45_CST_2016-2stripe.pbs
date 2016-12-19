@@ -1,11 +1,12 @@
 #!/bin/bash
 
-###PBS -l nodes=96:ppn=32:xe
-#PBS -l nodes=64:ppn=8:xe
-#PBS -l walltime=03:00:00
-#PBS -N 100M-slice
+#PBS -l nodes=32:ppn=8:xe
+#PBS -l walltime=02:00:00
+#PBS -N Thu_Dec__8_15:40:45_CST_2016
 #PBS -m abe
 #PBS -M frank.willmore@hdfgroup.org
+#PBS -e $PBS_JOBNAME.err
+#PBS -o $PBS_JOBNAME.out
 
 function processor_geometry {
 
@@ -32,27 +33,32 @@ EOF
 
 }
 
+#=============================================================================
+
 SEISM_CORE=/u/sciteam/willmore/seism-core/seism-core-slice
 TIME_STEPS=5
+rm -f seism-test.h5
+lfs setstripe -s 1048576 -c 2 seism-test.h5 
 
-for config in "8 8" "8 16" "8 32" "8 64" "8 128" "8 256" "8 512" 
+for config in "8 8" "8 16" "8 32" "8 64" "8 128" "8 256" 
 do
 
 ppn=`echo $config | awk '{print $1}'`
 processors=`echo $config | awk '{print $2}'`
 p_geom=`processor_geometry $processors` 
 
-printf "###%d\t processors" $processors 
+printf "###\t %d processors" $processors 
 printf "\n"
 
 aprun -N$ppn -n$processors $SEISM_CORE << EOF 
 processor $p_geom
 chunk 160 80 2048
 domain 160 80 2048
+precreate
 time $TIME_STEPS
 DONE
 EOF
 
-#done with this processor configuration
+# done with this processor configuration, end of for...do...done loop
 done
 

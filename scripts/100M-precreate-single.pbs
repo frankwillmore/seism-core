@@ -1,0 +1,111 @@
+#!/bin/bash
+
+#PBS -l nodes=96:ppn=8:xe
+#PBS -l walltime=2:00:00
+#PBS -N 100M-precreate-single
+#PBS -m abe
+#PBS -M frank.willmore@hdfgroup.org
+#PBS -e $PBS_JOBNAME.err
+#PBS -o $PBS_JOBNAME.out
+
+#export MPICH_MPIIO_CB_ALIGN=0
+#export MPICH_MPIIO_HINTS="*:cb_nodes=32:cb_buffer_size=1073741824"
+#export MPICH_MPIIO_HINTS_DISPLAY=1
+#export CB_SIZE=3932160
+#export CB_SIZE=1026457600
+
+
+function processor_geometry {
+
+grep "^$1" << EOF | awk '{print $2}' | sed -e "s/:/ /g" 
+8 2:2:2
+16 2:2:4
+24 2:3:4
+32 2:4:4
+36 3:3:4
+48 3:4:4
+64 4:4:4
+96 4:4:6
+384 6:8:8
+768 8:8:12
+1536 8:12:16
+3072 12:16:16
+EOF
+
+}
+
+SEISM_CORE=/u/sciteam/willmore/seism-core/seism-core
+TIME_STEPS=5
+
+date #=========================================================================
+echo "single dataset, created collectively"
+
+for config in "8 8" "8 16" "8 24" "8 36" "8 48" "8 64" "8 96" "8 384" "8 768" 
+do
+
+ppn=`echo $config | awk '{print $1}'`
+processors=`echo $config | awk '{print $2}'`
+p_geom=`processor_geometry $processors` 
+#export MPICH_MPIIO_HINTS="*:cb_nodes=$processors:cb_buffer_size=$CB_SIZE"
+
+tput=`aprun -N$ppn -n$processors $SEISM_CORE << EOF | grep throughput | awk '{print $3}' 
+processor $p_geom
+chunk 160 80 2048
+domain 160 80 2048
+time $TIME_STEPS
+precreate_datasets -1 
+DONE
+EOF`
+
+printf "%d\t%g\t\n" $processors $tput
+
+done #done with this processor configuration
+
+date #=========================================================================
+echo "single dataset, created on rank 0 only"
+
+for config in "8 8" "8 16" "8 24" "8 36" "8 48" "8 64" "8 96" "8 384" "8 768" 
+do
+
+ppn=`echo $config | awk '{print $1}'`
+processors=`echo $config | awk '{print $2}'`
+p_geom=`processor_geometry $processors` 
+#export MPICH_MPIIO_HINTS="*:cb_nodes=$processors:cb_buffer_size=$CB_SIZE"
+
+tput=`aprun -N$ppn -n$processors $SEISM_CORE << EOF | grep throughput | awk '{print $3}' 
+processor $p_geom
+chunk 160 80 2048
+domain 160 80 2048
+time $TIME_STEPS
+precreate_datasets 1 
+DONE
+EOF`
+
+printf "%d\t%g\t\n" $processors $tput
+
+done #done with this processor configuration
+
+date #=========================================================================
+echo "single dataset, no precreation"
+
+for config in "8 8" "8 16" "8 24" "8 36" "8 48" "8 64" "8 96" "8 384" "8 768" 
+do
+
+ppn=`echo $config | awk '{print $1}'`
+processors=`echo $config | awk '{print $2}'`
+p_geom=`processor_geometry $processors` 
+#export MPICH_MPIIO_HINTS="*:cb_nodes=$processors:cb_buffer_size=$CB_SIZE"
+
+tput=`aprun -N$ppn -n$processors $SEISM_CORE << EOF | grep throughput | awk '{print $3}' 
+processor $p_geom
+chunk 160 80 2048
+domain 160 80 2048
+time $TIME_STEPS
+precreate_datasets 0 
+DONE
+EOF`
+
+printf "%d\t%g\t\n" $processors $tput
+
+done #done with this processor configuration
+#==============================================================================

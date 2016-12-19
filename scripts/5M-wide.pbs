@@ -1,0 +1,109 @@
+#!/bin/bash
+
+
+### PBS specs
+
+#PBS -l nodes=384:ppn=8:xe
+#PBS -l walltime=00:40:00
+#PBS -N 5M-wide
+#PBS -m abe
+#PBS -M frank.willmore@hdfgroup.org
+#PBS -e $PBS_JOBNAME.err
+#PBS -o $PBS_JOBNAME.out
+
+
+export CHUNK_DIM="128 120 64"
+export SEISM_CORE=/u/sciteam/willmore/seism-core/seism-core
+export TIME_STEPS=2
+export WORKING_DIR=/scratch/sciteam/$USER/scale/$PBS_JOBNAME
+mkdir -p $WORKING_DIR
+cd $WORKING_DIR
+
+
+### MPIIO hints
+#export MPICH_MPIIO_CB_ALIGN=0
+#export MPICH_MPIIO_HINTS="*:cb_nodes=32:cb_buffer_size=1073741824"
+#export MPICH_MPIIO_HINTS_DISPLAY=1
+#export CB_SIZE=3932160
+
+
+function processor_geometry {
+
+grep "^$1" << EOF | awk '{print $2}' | sed -e "s/:/ /g" 
+8 2:2:2
+16 2:2:4
+24 2:3:4
+32 2:4:4
+36 3:3:4
+48 3:4:4
+64 4:4:4
+96 4:4:6
+384 6:8:8
+768 8:8:12
+1536 8:12:16
+3072 12:16:16
+EOF
+
+}
+
+
+printf "no time, no collective\n"
+for config in "8 8" "8 16" "8 24" "8 32" "8 48" "8 64" "8 96" "8 384" "8 768" "8 1536" "8 3072"
+do
+
+ppn=`echo $config | awk '{print $1}'`
+processors=`echo $config | awk '{print $2}'`
+p_geom=`processor_geometry $processors` 
+#export MPICH_MPIIO_HINTS="*:cb_nodes=$processors:cb_buffer_size=$CB_SIZE"
+
+tput=`aprun -N$ppn -n$processors $SEISM_CORE << EOF | grep throughput | awk '{print $3}' 
+processor $p_geom
+chunk $CHUNK_DIM
+domain $CHUNK_DIM
+time $TIME_STEPS
+#use_collective
+#separate_timesteps
+DONE
+EOF`
+
+printf "%d\t" $processors 
+printf "%g\t" $tput
+printf "\n"
+
+#done with this processor configuration
+done
+
+#==========
+date
+#==========
+
+printf "time, no collective\n"
+for config in "8 8" "8 16" "8 24" "8 32" "8 48" "8 64" "8 96" "8 384" "8 768" "8 1536" "8 3072"
+do
+
+ppn=`echo $config | awk '{print $1}'`
+processors=`echo $config | awk '{print $2}'`
+p_geom=`processor_geometry $processors` 
+#export MPICH_MPIIO_HINTS="*:cb_nodes=$processors:cb_buffer_size=$CB_SIZE"
+
+tput=`aprun -N$ppn -n$processors $SEISM_CORE << EOF | grep throughput | awk '{print $3}' 
+processor $p_geom
+chunk $CHUNK_DIM
+domain $CHUNK_DIM
+time $TIME_STEPS
+#use_collective
+separate_timesteps
+DONE
+EOF`
+
+printf "%d\t" $processors 
+printf "%g\t" $tput
+printf "\n"
+
+#done with this processor configuration
+done
+
+#==========
+date
+#==========
+

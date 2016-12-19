@@ -1,0 +1,153 @@
+#!/bin/bash
+
+#PBS -l nodes=96:ppn=32:xe
+#PBS -l walltime=12:00:00
+#PBS -N 200M
+#PBS -m abe
+#PBS -M frank.willmore@hdfgroup.org
+
+#mkdir -p /scratch/sciteam/$USER/scale
+#cd /scratch/sciteam/$USER/scale
+
+
+function processor_geometry {
+
+grep "^$1" << EOF | awk '{print $2}' | sed -e "s/:/ /g" 
+8 2:2:2
+16 2:2:4
+24 2:3:4
+36 3:3:4
+48 3:4:4
+64 4:4:4
+96 4:4:6
+384 6:8:8
+768 8:8:12
+1536 8:12:16
+3072 12:16:16
+EOF
+
+}
+
+
+SEISM_CORE=/u/sciteam/willmore/seism-core/seism-core
+TIME_STEPS=3
+
+printf "no time, no collective\n"
+
+for config in "8 8" "16 16" "24 24" "18 36" "24 48" "32 64" "32 96" "32 384" "32 768" "32 1536" "32 3072" 
+do
+
+ppn=`echo $config | awk '{print $1}'`
+processors=`echo $config | awk '{print $2}'`
+p_geom=`processor_geometry $processors` 
+
+printf "%d\t" $processors 
+
+for trial in {1..1}
+do
+tput=`aprun -N$ppn -n$processors $SEISM_CORE << EOF | grep throughput | awk '{print $3}' 
+processor $p_geom
+chunk 160 160 2048
+domain 160 160 2048
+time $TIME_STEPS
+#use_collective
+#separate_timesteps
+DONE
+EOF`
+
+#printf "%d\t%g\n" $processors $tput_1 >> $PBS_JOBNAME.tsv
+printf "%g\t" $tput
+
+# end of trials
+done
+
+printf "\n"
+
+#done with this processor configuration
+done
+
+#==========
+
+date
+
+#==========
+
+printf "time, no collective\n"
+
+for config in "8 8" "16 16" "24 24" "18 36" "24 48" "32 64" "32 96" "32 384" "32 768" "32 1536" "32 3072" 
+do
+
+ppn=`echo $config | awk '{print $1}'`
+processors=`echo $config | awk '{print $2}'`
+p_geom=`processor_geometry $processors` 
+
+printf "%d\t" $processors 
+
+for trial in {1..1}
+do
+tput=`aprun -N$ppn -n$processors $SEISM_CORE << EOF | grep throughput | awk '{print $3}' 
+processor $p_geom
+chunk 160 160 2048
+domain 160 160 2048
+time $TIME_STEPS
+#use_collective
+separate_timesteps
+DONE
+EOF`
+
+#printf "%d\t%g\n" $processors $tput_1 >> $PBS_JOBNAME.tsv
+printf "%g\t" $tput
+
+# end of trials
+done
+
+printf "\n"
+
+#done with this processor configuration
+done
+
+#==========
+
+date
+
+#==========
+
+printf "time, collective\n"
+
+for config in "8 8" "16 16" "24 24" "18 36" "24 48" "32 64" "32 96" "32 384" "32 768" "32 1536" "32 3072" 
+do
+
+ppn=`echo $config | awk '{print $1}'`
+processors=`echo $config | awk '{print $2}'`
+p_geom=`processor_geometry $processors` 
+
+printf "%d\t" $processors 
+
+for trial in {1..1}
+do
+tput=`aprun -N$ppn -n$processors $SEISM_CORE << EOF | grep throughput | awk '{print $3}' 
+processor $p_geom
+chunk 160 160 2048
+domain 160 160 2048
+time $TIME_STEPS
+use_collective
+separate_timesteps
+DONE
+EOF`
+
+#printf "%d\t%g\n" $processors $tput_1 >> $PBS_JOBNAME.tsv
+printf "%g\t" $tput
+
+# end of trials
+done
+
+printf "\n"
+
+#done with this processor configuration
+done
+
+#==========
+
+date
+
+#==========
