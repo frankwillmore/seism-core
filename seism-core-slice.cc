@@ -68,7 +68,9 @@ void setMPI_Info(MPI_Info& info, const size_t& v_size, int mpi_size)
   ostringstream ost;
   ost << v_size * sizeof(float);
   //assert(MPI_Info_set( info, "cb_block_size", ost.str().c_str()) == MPI_SUCCESS);
-  assert(MPI_Info_set( info, "cb_buf_size", ost.str().c_str()) == MPI_SUCCESS);
+  // I think the following may be the wrong name, so I replaced buf with buffer
+  //assert(MPI_Info_set( info, "cb_buf_size", ost.str().c_str()) == MPI_SUCCESS);
+  assert(MPI_Info_set( info, "cb_buffer_size", ost.str().c_str()) == MPI_SUCCESS);
   ost.str("");
   ost << mpi_size;
   //assert(MPI_Info_set( info, "cb_nodes", ost.str().c_str() ) == MPI_SUCCESS);
@@ -240,7 +242,7 @@ int main(int argc, char** argv)
 
 #if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
   assert(H5Pset_all_coll_metadata_ops(fapl, 1) >=0 );
-  printf("setting all_coll_meta_data_ops true\n");
+  printf("setting all_coll_meta_data_ops fapl true\n");
 #endif
 
   // file handle and name for file which will be created
@@ -267,6 +269,10 @@ int main(int argc, char** argv)
       assert (file >= 0);
       MPI_Barrier(MPI_COMM_WORLD);
       create_2 = MPI_Wtime();
+#if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
+      assert(H5Pset_all_coll_metadata_ops(dcpl, 1) >=0 );
+      printf("setting all_coll_meta_data_ops dcpl true\n");
+#endif
       dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, H5P_DEFAULT);
       assert(dset_chunked >= 0);
       MPI_Barrier(MPI_COMM_WORLD);
