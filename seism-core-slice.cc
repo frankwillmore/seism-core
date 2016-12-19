@@ -46,6 +46,7 @@ void precreate_0
   assert(fapl >= 0);
   assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
          0);
+
   hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
   assert(file >= 0);
   hid_t dset = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
@@ -237,6 +238,11 @@ int main(int argc, char** argv)
     }
   assert(H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, info) >= 0);
 
+#if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
+  assert(H5Pset_all_coll_metadata_ops(fapl, 1) >=0 );
+  printf("setting all_coll_meta_data_ops true\n");
+#endif
+
   // file handle and name for file which will be created
   string fname = "seism-test.h5";
   hid_t file, dset_chunked;
@@ -247,6 +253,7 @@ int main(int argc, char** argv)
 
   // precreate datasets, as needed
   double start_create = MPI_Wtime();
+  double create_1, create_2, create_3;
 
   if (pre_flg)
     {
@@ -255,10 +262,15 @@ int main(int argc, char** argv)
           precreate_0(fname, fspace, dcpl);
         }
       MPI_Barrier(MPI_COMM_WORLD);
+      create_1 = MPI_Wtime();
       file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl);
       assert (file >= 0);
+      MPI_Barrier(MPI_COMM_WORLD);
+      create_2 = MPI_Wtime();
       dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, H5P_DEFAULT);
       assert(dset_chunked >= 0);
+      MPI_Barrier(MPI_COMM_WORLD);
+      create_3 = MPI_Wtime();
     }
   else
     {
@@ -321,9 +333,12 @@ int main(int argc, char** argv)
         {
           cout << "C";
         }
-      cout << "reate/open:\t";
+      cout << "Create/open:\t";
       if (!pre_flg) { cout << "\t";}
       cout << (stop_create - start_create) << " s" << endl;
+      cout << "Time in precreate_0():\t"  << (create_1 - start_create) << " s" << endl;
+      cout << "Time in H5Fopen():\t"  << (create_2 - create_1) << " s" << endl;
+      cout << "Time in H5Dopen():\t"  << (create_3 - create_2) << " s" << endl;
       cout << "Write:\t\t\t" <<
         (stop_chunked - start_chunked) << " s" << endl;
       cout << "Write throughput:\t" << bytes_written /

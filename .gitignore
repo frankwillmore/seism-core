@@ -3,4 +3,6 @@ seism-core-slice
 *.o
 *.h5
 Makefile
+results/*
+scripts
 
