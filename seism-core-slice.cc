@@ -179,6 +179,8 @@ int main(int argc, char** argv)
   assert(dcpl >= 0);
   assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
 
+  hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
+  assert(dapl >= 0);
   //////////////////////////////////////////////////////////////////////////////
   // prepare hyperslab selection, use max dims, can ignore 4th as needed
   hsize_t start[4], block[4], count[4] = {1,1,1,1};
@@ -243,6 +245,8 @@ int main(int argc, char** argv)
 #if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
   assert(H5Pset_all_coll_metadata_ops(fapl, 1) >=0 );
   printf("setting all_coll_meta_data_ops fapl true\n");
+  assert(H5Pset_all_coll_metadata_ops(dapl, 1) >=0 );
+  printf("setting all_coll_meta_data_ops dapl true\n");
 #endif
 
   // file handle and name for file which will be created
@@ -269,11 +273,7 @@ int main(int argc, char** argv)
       assert (file >= 0);
       MPI_Barrier(MPI_COMM_WORLD);
       create_2 = MPI_Wtime();
-//#if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
-////      assert(H5Pset_all_coll_metadata_ops(dcpl, 1) >=0 );
-////      printf("setting all_coll_meta_data_ops dcpl true\n");
-////#endif
-      dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, H5P_DEFAULT);
+      dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, dapl);
       assert(dset_chunked >= 0);
       MPI_Barrier(MPI_COMM_WORLD);
       create_3 = MPI_Wtime();
@@ -283,7 +283,7 @@ int main(int argc, char** argv)
       file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
       assert(file >= 0);
       dset_chunked = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
-                               H5P_DEFAULT, dcpl, H5P_DEFAULT);
+                               H5P_DEFAULT, dcpl, dapl);
       assert(dset_chunked >= 0);
     }
 
@@ -317,6 +317,7 @@ int main(int argc, char** argv)
   assert(H5Pclose(dxpl) >= 0);
   assert(H5Sclose(fspace) >= 0);
   assert(H5Pclose(dcpl) >= 0);
+  assert(H5Pclose(dapl) >= 0);
 
   MPI_Barrier(MPI_COMM_WORLD);
   double fclose_start = MPI_Wtime();

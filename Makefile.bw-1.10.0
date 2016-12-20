@@ -24,6 +24,14 @@ seism-core-slice.o: seism-core-slice.cc
 
 
 
+check-slice: seism-core-slice
+	aprun -N8 -n 8 ./seism-core-slice < tests/bw/check-8-pre
+	aprun -N16 -n 16 ./seism-core-slice < tests/bw/check-16-pre
+	aprun -N32 -n 32 ./seism-core-slice < tests/bw/check-32-pre
+	aprun -N32 -n 64 ./seism-core-slice < tests/bw/check-64-pre
+	aprun -N32 -n 128 ./seism-core-slice < tests/bw/check-128-pre
+	aprun -N32 -n 256 ./seism-core-slice < tests/bw/check-256-pre
+
 
 
 

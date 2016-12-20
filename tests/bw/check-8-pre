@@ -1,0 +1,10 @@
+processor 2 2 2
+chunk 360 128 128
+domain 180 128 128
+time 5
+precreate
+use_collective
+DONE
+EOF
+
+
