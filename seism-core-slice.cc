@@ -269,10 +269,10 @@ int main(int argc, char** argv)
       assert (file >= 0);
       MPI_Barrier(MPI_COMM_WORLD);
       create_2 = MPI_Wtime();
-#if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
-      assert(H5Pset_all_coll_metadata_ops(dcpl, 1) >=0 );
-      printf("setting all_coll_meta_data_ops dcpl true\n");
-#endif
+//#if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
+////      assert(H5Pset_all_coll_metadata_ops(dcpl, 1) >=0 );
+////      printf("setting all_coll_meta_data_ops dcpl true\n");
+////#endif
       dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, H5P_DEFAULT);
       assert(dset_chunked >= 0);
       MPI_Barrier(MPI_COMM_WORLD);
@@ -339,7 +339,7 @@ int main(int argc, char** argv)
         {
           cout << "C";
         }
-      cout << "Create/open:\t";
+      cout << "reate/open:\t";
       if (!pre_flg) { cout << "\t";}
       cout << (stop_create - start_create) << " s" << endl;
       cout << "Time in precreate_0():\t"  << (create_1 - start_create) << " s" << endl;
