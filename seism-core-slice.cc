@@ -44,6 +44,9 @@ void precreate_0
 {
   hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
   assert(fapl >= 0);
+hsize_t size=65536 ;
+assert(H5Pset_meta_block_size( fapl, size ) >=0);
+assert(H5Pset_fapl_log (fapl, "logfile_ftw", H5FD_LOG_ALL, 65536) >=0);
   assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
          0);
 
@@ -54,6 +57,8 @@ void precreate_0
   assert(dset >= 0);
   assert(H5Dclose(dset) >= 0);
   assert(H5Fclose(file) >= 0);
+H5Pget_meta_block_size( fapl, &size );
+printf("meta_block_size = %d\n", size);
   assert(H5Pclose(fapl) >= 0);
 }
 
@@ -244,9 +249,9 @@ int main(int argc, char** argv)
 
 #if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
   assert(H5Pset_all_coll_metadata_ops(fapl, 1) >=0 );
-  printf("setting all_coll_meta_data_ops fapl true\n");
+//  printf("setting all_coll_meta_data_ops fapl true\n");
   assert(H5Pset_all_coll_metadata_ops(dapl, 1) >=0 );
-  printf("setting all_coll_meta_data_ops dapl true\n");
+//  printf("setting all_coll_meta_data_ops dapl true\n");
 #endif
 
   // file handle and name for file which will be created
@@ -317,6 +322,8 @@ int main(int argc, char** argv)
   assert(H5Pclose(dxpl) >= 0);
   assert(H5Sclose(fspace) >= 0);
   assert(H5Pclose(dcpl) >= 0);
+  hbool_t is_collective;
+  H5Pget_all_coll_metadata_ops( dapl, &is_collective );
   assert(H5Pclose(dapl) >= 0);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -356,6 +363,9 @@ int main(int argc, char** argv)
       cout << "Aggregate throughput:\t" << bytes_written /
         (fclose_stop - begin) / ((double) (1<<20)) << " MB/s"
            << endl;
+      cout << "Mdata ops collective:\t" << is_collective
+           << endl;
+
     }
 
   MPI_Finalize();
