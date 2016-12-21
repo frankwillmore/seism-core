@@ -46,6 +46,7 @@ void precreate_0
   assert(fapl >= 0);
   assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
          0);
+//  assert(H5Pset_alloc_time(fapl, H5D_ALLOC_TIME_EARLY) >= 0);
 
   hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
   assert(file >= 0);
@@ -68,9 +69,9 @@ void setMPI_Info(MPI_Info& info, const size_t& v_size, int mpi_size)
   ostringstream ost;
   ost << v_size * sizeof(float);
   //assert(MPI_Info_set( info, "cb_block_size", ost.str().c_str()) == MPI_SUCCESS);
+  // I think the following may be the wrong name, so I replaced buf with buffer
   //assert(MPI_Info_set( info, "cb_buf_size", ost.str().c_str()) == MPI_SUCCESS);
-  //ost.str("");
-  //ost << mpi_size;
+  assert(MPI_Info_set( info, "cb_buffer_size", ost.str().c_str()) == MPI_SUCCESS);
   //assert(MPI_Info_set( info, "cb_nodes", ost.str().c_str() ) == MPI_SUCCESS);
 }
 
@@ -178,6 +179,8 @@ int main(int argc, char** argv)
   assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
   assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
 
+  hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
+  assert(dapl >= 0);
   //////////////////////////////////////////////////////////////////////////////
   // prepare hyperslab selection, use max dims, can ignore 4th as needed
   hsize_t start[4], block[4], count[4] = {1,1,1,1};
@@ -243,6 +246,12 @@ int main(int argc, char** argv)
     }
   assert(H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, info) >= 0);
 
+#if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
+  assert(H5Pset_all_coll_metadata_ops(fapl, 1) >=0 );
+//  printf("setting all_coll_meta_data_ops fapl true\n");
+  assert(H5Pset_all_coll_metadata_ops(dapl, 1) >=0 );
+//  printf("setting all_coll_meta_data_ops dapl true\n");
+#endif
   // file handle and name for file which will be created
   string fname = "seism-test.h5";
   hid_t file, dset_chunked;
@@ -266,7 +275,7 @@ int main(int argc, char** argv)
       assert (file >= 0);
       MPI_Barrier(MPI_COMM_WORLD);
       create_2 = MPI_Wtime();
-      dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, H5P_DEFAULT);
+      dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, dapl);
       assert(dset_chunked >= 0);
       MPI_Barrier(MPI_COMM_WORLD);
       create_3 = MPI_Wtime();
@@ -276,7 +285,7 @@ int main(int argc, char** argv)
       file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
       assert(file >= 0);
       dset_chunked = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
-                               H5P_DEFAULT, dcpl, H5P_DEFAULT);
+                               H5P_DEFAULT, dcpl, dapl);
       assert(dset_chunked >= 0);
     }
 
@@ -309,6 +318,9 @@ int main(int argc, char** argv)
   assert(H5Pclose(dxpl) >= 0);
   assert(H5Sclose(fspace) >= 0);
   assert(H5Pclose(dcpl) >= 0);
+  hbool_t is_collective;
+  H5Pget_all_coll_metadata_ops( dapl, &is_collective );
+  assert(H5Pclose(dapl) >= 0);
 
   MPI_Barrier(MPI_COMM_WORLD);
   double fclose_start = MPI_Wtime();
@@ -350,6 +362,9 @@ int main(int argc, char** argv)
       cout << "Aggregate throughput:\t" << bytes_written /
         (fclose_stop - begin) / ((double) (1<<20)) << " MB/s"
            << endl;
+      cout << "Mdata ops collective:\t" << is_collective
+           << endl;
+
     }
 
   MPI_Finalize();

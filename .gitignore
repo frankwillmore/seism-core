@@ -4,5 +4,4 @@ seism-core-slice
 *.h5
 Makefile
 results/*
-scripts
 
