@@ -68,9 +68,9 @@ void setMPI_Info(MPI_Info& info, const size_t& v_size, int mpi_size)
   ostringstream ost;
   ost << v_size * sizeof(float);
   //assert(MPI_Info_set( info, "cb_block_size", ost.str().c_str()) == MPI_SUCCESS);
-  assert(MPI_Info_set( info, "cb_buf_size", ost.str().c_str()) == MPI_SUCCESS);
-  ost.str("");
-  ost << mpi_size;
+  //assert(MPI_Info_set( info, "cb_buf_size", ost.str().c_str()) == MPI_SUCCESS);
+  //ost.str("");
+  //ost << mpi_size;
   //assert(MPI_Info_set( info, "cb_nodes", ost.str().c_str() ) == MPI_SUCCESS);
 }
 
@@ -176,6 +176,7 @@ int main(int argc, char** argv)
   hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
   assert(dcpl >= 0);
   assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
+  assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
 
   //////////////////////////////////////////////////////////////////////////////
   // prepare hyperslab selection, use max dims, can ignore 4th as needed
@@ -227,6 +228,10 @@ int main(int argc, char** argv)
   assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
          0);
 
+#if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
+  assert(H5Pset_all_coll_metadata_ops(fapl, true) >=0 );
+#endif
+
   MPI_Info info;
   if (coll_flg)
     {
@@ -238,11 +243,6 @@ int main(int argc, char** argv)
     }
   assert(H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, info) >= 0);
 
-#if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
-  assert(H5Pset_all_coll_metadata_ops(fapl, 1) >=0 );
-  printf("setting all_coll_meta_data_ops true\n");
-#endif
-
   // file handle and name for file which will be created
   string fname = "seism-test.h5";
   hid_t file, dset_chunked;
@@ -250,7 +250,6 @@ int main(int argc, char** argv)
   MPI_Barrier(MPI_COMM_WORLD);
 
   //////////////////////////////////////////////////////////////////////////////
-
   // precreate datasets, as needed
   double start_create = MPI_Wtime();
   double create_1, create_2, create_3;
@@ -285,12 +284,11 @@ int main(int argc, char** argv)
   double stop_create = MPI_Wtime();
 
   //////////////////////////////////////////////////////////////////////////////
-  // write the contiguous dataset
+  // write the chunked dataset
 
   MPI_Barrier(MPI_COMM_WORLD);
   double start_chunked = MPI_Wtime();
 
-  // write the chunked dataset
   for (size_t it = 0; it < simulation_time; ++it)
     {
       start[0] = (hsize_t) it;
@@ -333,12 +331,15 @@ int main(int argc, char** argv)
         {
           cout << "C";
         }
-      cout << "Create/open:\t";
+      cout << "reate/open:\t";
       if (!pre_flg) { cout << "\t";}
       cout << (stop_create - start_create) << " s" << endl;
-      cout << "Time in precreate_0():\t"  << (create_1 - start_create) << " s" << endl;
-      cout << "Time in H5Fopen():\t"  << (create_2 - create_1) << " s" << endl;
-      cout << "Time in H5Dopen():\t"  << (create_3 - create_2) << " s" << endl;
+      if (pre_flg)
+      {
+          cout << "Time in precreate_0():\t"  << (create_1 - start_create) << " s" << endl;
+          cout << "Time in H5Fopen():\t"  << (create_2 - create_1) << " s" << endl;
+          cout << "Time in H5Dopen():\t"  << (create_3 - create_2) << " s" << endl;
+      }
       cout << "Write:\t\t\t" <<
         (stop_chunked - start_chunked) << " s" << endl;
       cout << "Write throughput:\t" << bytes_written /
