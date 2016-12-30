@@ -1,0 +1,68 @@
+#!/bin/bash
+
+#PBS -l nodes=8:ppn=8:xe
+#PBS -l walltime=02:00:00
+#PBS -N Fri_Dec_16_15:15:48_CST_2016
+#PBS -m abe
+#PBS -M frank.willmore@hdfgroup.org
+#PBS -e $PBS_JOBNAME.err
+#PBS -o $PBS_JOBNAME.out
+
+function processor_geometry {
+
+grep "^$1" << EOF | awk '{print $2}' | sed -e "s/:/ /g" 
+8 2:2:2
+16 2:2:4
+24 2:3:4
+32 2:4:4
+36 3:3:4
+48 3:4:4
+64 4:4:4
+96 4:4:6
+128 4:4:8
+256 4:8:8
+384 6:8:8
+512 8:8:8
+768 8:8:12
+1024 8:8:16
+1536 8:12:16
+2048 8:16:16
+3072 12:16:16
+4096 16:16:16
+EOF
+
+}
+
+#=============================================================================
+
+SEISM_CORE=/u/sciteam/willmore/seism-core/seism-core-slice
+TIME_STEPS=5
+rm -f seism-test.h5
+lfs setstripe -s 1048576 -c 1 seism-test.h5 
+
+#. ~/local/build_hdf5/NCSA_Blue_Waters/env_hdf5-1.10.0.sh
+module load cray-hdf5-parallel/1.10.0 
+ldd $SEISM_CORE
+
+for config in "8 8" "8 16" "8 32" "8 64" 
+do
+
+ppn=`echo $config | awk '{print $1}'`
+processors=`echo $config | awk '{print $2}'`
+p_geom=`processor_geometry $processors` 
+
+printf "###\t %d processors" $processors 
+printf "\n"
+
+aprun -N$ppn -n$processors $SEISM_CORE << EOF 
+processor $p_geom
+chunk 160 80 2048
+domain 160 80 2048
+precreate
+time $TIME_STEPS
+DONE
+EOF
+
+# done with this processor configuration, end of for...do...done loop
+done
+

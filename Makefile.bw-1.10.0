@@ -16,11 +16,15 @@ CXXFLAGS=-O2 -lstdc++
 
 #all: seism-core
 
-seism-core-slice: seism-core-slice.o
-	CC -DCRAYCC -dynamic -O2 -L/u/sciteam/willmore/local/phdf5-1.10.0-install/lib -lhdf5 -L/opt/cray/mpt/7.2.4/gni/mpich2-CRAY64/8.3/lib -lmpichcxx_cray_default64 seism-core-slice.o -o seism-core-slice
+#seism-core-slice: seism-core-slice.o
+#	CC -DCRAYCC -dynamic -O2 -L/u/sciteam/willmore/local/phdf5-1.10.0-install/lib -lhdf5 -L/opt/cray/mpt/7.2.4/gni/mpich2-CRAY64/8.3/lib -lmpichcxx_cray_default64 seism-core-slice.o -o seism-core-slice
 
-seism-core-slice.o: seism-core-slice.cc
-	CC -I/u/sciteam/willmore/local/phdf5-1.10.0-install/include -I/usr/lib64/include -DCRAYCC -dynamic -O2 -c seism-core-slice.cc 
+# Build using the system-installed 1.10.0 module... note that Darshan should be disabled as it causes an error of as-yet-unkown origin
+seism-core-slice: seism-core-slice.cc
+	CC -DCRAYCC -dynamic -O2 -lhdf5 seism-core-slice.cc -o seism-core-slice
+
+#seism-core-slice.o: seism-core-slice.cc
+#	CC -I/u/sciteam/willmore/local/phdf5-1.10.0-install/include -I/usr/lib64/include -DCRAYCC -dynamic -O2 -c seism-core-slice.cc 
 
 
 
