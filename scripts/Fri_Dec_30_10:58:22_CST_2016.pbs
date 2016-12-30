@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#PBS -l nodes=8:ppn=8:xe
+#PBS -l nodes=32:ppn=8:xe
 #PBS -l walltime=02:00:00
-#PBS -N Fri_Dec_16_15:15:48_CST_2016
+#PBS -N Fri_Dec_30_10:58:22_CST_2016 
 #PBS -m abe
 #PBS -M frank.willmore@hdfgroup.org
 #PBS -e $PBS_JOBNAME.err
@@ -42,9 +42,10 @@ lfs setstripe -s 1048576 -c 1 seism-test.h5
 
 #. ~/local/build_hdf5/NCSA_Blue_Waters/env_hdf5-1.10.0.sh
 module load cray-hdf5-parallel/1.10.0 
+module unload darshan
 ldd $SEISM_CORE
 
-for config in "8 8" "8 16" "8 32" "8 64" 
+for config in "8 8" "8 16" "8 32" "8 64" "8 128" "8 256" 
 do
 
 ppn=`echo $config | awk '{print $1}'`
