@@ -2,30 +2,30 @@
 
 #  remember to: module load cray-hdf5-parallel 
 CXX=h5pcc
-#CXX=CC
-#CXXFLAGS=-Wall -O2  -lstdc++
 CXXFLAGS=-O2 -lstdc++
-#CXXFLAGS=-O2 
-#CXXFLAGS=-Wall -O0 -g -std=c++0x
-#CXX_INCLUDES=/usr/include/c++/4.3/
+CXX_INCLUDES=/usr/include/c++/4.3/
+IFLAGS:=-I/u/sciteam/willmore/local/phdf5-1.10.0-install/include -I${CXX_INCLUDES}
+LFLAGS:=-L/u/sciteam/willmore/local/phdf5-1.10.0-install/lib -lhdf5
 
-#IFLAGS=-I/u/sciteam/willmore/local/phdf5-1.10.0-install/include -I${CXX_INCLUDES}
-#LFLAGS=-L/u/sciteam/willmore/local/phdf5-1.10.0-install/lib -lhdf5
 
-#	CC -I/u/sciteam/willmore/local/phdf5-1.10.0-install/include -I/usr/lib64/include -DCRAYCC -dynamic -O2 -L/u/sciteam/willmore/local/phdf5-1.10.0-install/lib -lhdf5 -L/opt/cray/mpt/7.2.4/gni/mpich2-CRAY64/8.3/lib -lmpichcxx_cray_default64 seism-core-slice.o 
+default:
+	@printf "\033[31;01m' *** See instructions in Makefile, for prerequisites on building with 1.10.0 with two versions ***\033[0m\n"
 
-#all: seism-core
+seism-core-slice: 
+	@printf "\033[31;01m *** building the default version (seism-core-slice-bw) with default cray-hdf5-parallel/1.10.0 version ***\033[0m\n"
+	make seism-core-slice-bw
 
-#seism-core-slice: seism-core-slice.o
-#	CC -DCRAYCC -dynamic -O2 -L/u/sciteam/willmore/local/phdf5-1.10.0-install/lib -lhdf5 -L/opt/cray/mpt/7.2.4/gni/mpich2-CRAY64/8.3/lib -lmpichcxx_cray_default64 seism-core-slice.o -o seism-core-slice
+# Make using my installed 1.10.0 version
+seism-core-slice-patch: seism-core-slice.cc
+	@printf "\033[31;01m\n\n*** Make sure to source ~/local/build_hdf5/NCSA_Blue_Waters/env_hdf5-1.10.0.sh to get the right environment when running ***\n\n\033[0m"
+	CC -I/u/sciteam/willmore/local/phdf5-1.10.0-install/include -DCRAYCC -dynamic -O2 -lstdc++ -L/u/sciteam/willmore/local/phdf5-1.10.0-install/lib -lhdf5 -L/opt/cray/mpt/7.2.4/gni/mpich2-CRAY64/8.3/lib -lmpichcxx_cray_default64 seism-core-slice.cc -o seism-core-slice-patch
+
 
 # Build using the system-installed 1.10.0 module... note that Darshan should be disabled as it causes an error of as-yet-unkown origin
-seism-core-slice: seism-core-slice.cc
-	CC -DCRAYCC -dynamic -O2 -lhdf5 seism-core-slice.cc -o seism-core-slice
-
-#seism-core-slice.o: seism-core-slice.cc
-#	CC -I/u/sciteam/willmore/local/phdf5-1.10.0-install/include -I/usr/lib64/include -DCRAYCC -dynamic -O2 -c seism-core-slice.cc 
-
+# module load cray-hdf5-parallel/1.10.0
+# module unload darshan
+seism-core-slice-bw: seism-core-slice.cc
+	CC -DCRAYCC -dynamic -O2 -lhdf5 seism-core-slice.cc -o seism-core-slice-bw
 
 
 check-slice: seism-core-slice
@@ -36,20 +36,10 @@ check-slice: seism-core-slice
 	aprun -N32 -n 128 ./seism-core-slice < tests/bw/check-128-pre
 	aprun -N32 -n 256 ./seism-core-slice < tests/bw/check-256-pre
 
-
-
-
-
-seism-core: seism-core.o
-	$(CXX) $(CXXFLAGS) $(IFLAGS) $(LFLAGS) seism-core.o -o $@
-
-seism-core.o: seism-core.cc
-	$(CXX) $(CXXFLAGS) $(IFLAGS) $(LFLAGS) -c $< -o $@
-
 clean:
 	rm -f *.o *.h5
 
 veryclean: clean
-	rm -f seism-core
+	rm -f seism-core-slice-*
 
 
