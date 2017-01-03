@@ -46,7 +46,7 @@ void precreate_0
   assert(fapl >= 0);
   assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
          0);
-//  assert(H5Pset_alloc_time(fapl, H5D_ALLOC_TIME_EARLY) >= 0);
+  assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
 
   hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
   assert(file >= 0);
@@ -178,6 +178,7 @@ int main(int argc, char** argv)
   assert(dcpl >= 0);
   assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
   assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
+  assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
 
   hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
   assert(dapl >= 0);
