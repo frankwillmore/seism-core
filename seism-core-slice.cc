@@ -35,6 +35,25 @@ using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void set_simulation_attributes(hid_t file, unsigned int *processor)
+{
+    hid_t type_id = H5T_NATIVE_CHAR;
+    const hsize_t current_dims[] = {3};
+    const hsize_t maximum_dims[] = {3};
+    hid_t space_id = H5Screate_simple( 1, current_dims, maximum_dims );
+    hid_t acpl_id = H5P_DEFAULT;
+    hid_t aapl_id = H5P_DEFAULT;
+
+    hid_t attr_id = H5Acreate2( file, "my_attr", type_id, space_id, acpl_id, aapl_id );
+    hid_t mem_type_id = H5T_NATIVE_INT;
+//    const int buf[] = {12,34,56};
+//    assert(H5Awrite(attr_id, mem_type_id, buf ) >= 0);
+    assert(H5Awrite(attr_id, mem_type_id, processor ) >= 0);
+
+    H5Sclose(space_id);
+    H5Aclose(attr_id);
+}
+
 void precreate_0
 (
  const string& fname,
@@ -266,6 +285,7 @@ int main(int argc, char** argv)
       create_1 = MPI_Wtime();
       file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl);
       assert (file >= 0);
+      set_simulation_attributes(file, processor);
       MPI_Barrier(MPI_COMM_WORLD);
       create_2 = MPI_Wtime();
       dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, dapl);
@@ -277,6 +297,7 @@ int main(int argc, char** argv)
     {
       file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
       assert(file >= 0);
+      set_simulation_attributes(file, processor);
       dset_chunked = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
                                H5P_DEFAULT, dcpl, dapl);
       assert(dset_chunked >= 0);
