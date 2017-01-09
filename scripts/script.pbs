@@ -22,7 +22,7 @@ NEVER_FILL=
 # set any non-empty value if RUNNING_ON_BW 
 RUNNING_ON_BW=
 # set what processor configurations (first num is ignored on jelly)
-CONFIGURATIONS="8_8 8_16 8_32"
+CONFIGURATIONS="8_8 8_16 8_16"
 
 PRECREATE=precreate
 COLLECTIVE_WRITE=collective_write

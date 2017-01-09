@@ -42,25 +42,41 @@ using namespace std;
 #define CHUNKED_DSET_NAME "chunked"
 
 ////////////////////////////////////////////////////////////////////////////////
-
-void record_simulation_attributes(hid_t file, unsigned int *processor,
-                                  unsigned int *chunk_dims)
+  
+void record_simulation_attributes(
+        hid_t file, 
+        unsigned int *processor_dims,
+        unsigned int *domain_dims,
+        unsigned int *chunk_dims,
+        unsigned int simulation_time, 
+        int collective_write, 
+        int precreate,
+        int set_collective_metadata,
+        int early_allocation,
+        int never_fill
+        )
 {
-    // create the inner types
+    // create the inner array and character types
     hid_t vls_type_c_id = H5Tcopy(H5T_C_S1);
+    H5Tset_size(vls_type_c_id, H5T_VARIABLE);
     hsize_t adims[] = {3};
     hid_t dim_h5t = H5Tarray_create(H5T_NATIVE_UINT, 1, adims);
 
     // create the compound type
     hid_t attributes_h5t = H5Tcreate(H5T_COMPOUND, sizeof(seism_core_attributes_t)); 
-    H5Tinsert(attributes_h5t, "name", HOFFSET(seism_core_attributes_t, name), 
-                                            vls_type_c_id);
-    H5Tinsert(attributes_h5t, "chunk_dims", HOFFSET(seism_core_attributes_t, 
-                                                  chunk_dims), dim_h5t);
-    H5Tinsert(attributes_h5t, "processor_dims", HOFFSET(seism_core_attributes_t, 
-                                                      processor_dims), dim_h5t);
-    assert(H5Tcommit(file, "attributes_t", attributes_h5t, H5P_DEFAULT, 
-                     H5P_DEFAULT, H5P_DEFAULT) >= 0 );
+    H5Tinsert(attributes_h5t, "name", HOFFSET(seism_core_attributes_t, name), vls_type_c_id);
+    H5Tinsert(attributes_h5t, "processor_dims", HOFFSET(seism_core_attributes_t, processor_dims), dim_h5t);
+    H5Tinsert(attributes_h5t, "chunk_dims", HOFFSET(seism_core_attributes_t, chunk_dims), dim_h5t);
+    H5Tinsert(attributes_h5t, "domain_dims", HOFFSET(seism_core_attributes_t, domain_dims), dim_h5t);
+    H5Tinsert(attributes_h5t, "simulation_time", HOFFSET(seism_core_attributes_t, simulation_time), H5T_NATIVE_UINT);
+    H5Tinsert(attributes_h5t, "collective_write", HOFFSET(seism_core_attributes_t, collective_write), H5T_NATIVE_INT);
+    H5Tinsert(attributes_h5t, "precreate", HOFFSET(seism_core_attributes_t, precreate), H5T_NATIVE_INT);
+    H5Tinsert(attributes_h5t, "set_collective_metadata", HOFFSET(seism_core_attributes_t, set_collective_metadata), H5T_NATIVE_INT);
+    H5Tinsert(attributes_h5t, "early_allocation", HOFFSET(seism_core_attributes_t, early_allocation), H5T_NATIVE_INT);
+    H5Tinsert(attributes_h5t, "never_fill", HOFFSET(seism_core_attributes_t, never_fill), H5T_NATIVE_INT);
+
+    // commit the compound type to HDF5 file
+    assert(H5Tcommit(file, "attributes_t", attributes_h5t, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) >= 0 );
            
     // create scalar dataspace for attributes        
     hid_t space_id = H5Screate(H5S_SCALAR);
@@ -72,13 +88,22 @@ void record_simulation_attributes(hid_t file, unsigned int *processor,
 
     // crate a buffer, asign values and write attribute
     seism_core_attributes_t attributes_buf;
-    attributes_buf.name = "my_attributes";
-    attributes_buf.chunk_dims[0] = 16;
-    attributes_buf.chunk_dims[1] = 32;
-    attributes_buf.chunk_dims[2] = 64;
-    attributes_buf.processor_dims[0] = 16;
-    attributes_buf.processor_dims[1] = 32;
-    attributes_buf.processor_dims[2] = 64;
+    attributes_buf.name = (char*)"my_attributes";
+    attributes_buf.chunk_dims[0] = chunk_dims[0];
+    attributes_buf.chunk_dims[1] = chunk_dims[1];
+    attributes_buf.chunk_dims[2] = chunk_dims[2];
+    attributes_buf.processor_dims[0] = processor_dims[0];
+    attributes_buf.processor_dims[1] = processor_dims[1];
+    attributes_buf.processor_dims[2] = processor_dims[2];
+    attributes_buf.domain_dims[0] = domain_dims[0];
+    attributes_buf.domain_dims[1] = domain_dims[1];
+    attributes_buf.domain_dims[2] = domain_dims[2];
+    attributes_buf.simulation_time = simulation_time;
+    attributes_buf.collective_write = collective_write;
+    attributes_buf.precreate = precreate;
+    attributes_buf.set_collective_metadata = set_collective_metadata;
+    attributes_buf.early_allocation = early_allocation;
+    attributes_buf.never_fill = never_fill;
     assert(H5Awrite(attr_id, attributes_h5t, &attributes_buf ) >= 0);
 
     // close resources
@@ -88,26 +113,26 @@ void record_simulation_attributes(hid_t file, unsigned int *processor,
 }
 
 void precreate_0
-(
- const string& fname,
- hid_t         fspace,
- hid_t         dcpl
- )
-{
-  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-  assert(fapl >= 0);
-  assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
-         0);
+  (
+    const string& fname,
+    hid_t         fspace,
+    hid_t         dcpl
+  )
+  {
+    hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+    assert(fapl >= 0);
+    assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
+           0);
 
-  hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
-  assert(file >= 0);
-  hid_t dset = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
-                         H5P_DEFAULT, dcpl, H5P_DEFAULT);
-  assert(dset >= 0);
-  assert(H5Dclose(dset) >= 0);
-  assert(H5Fclose(file) >= 0);
-  assert(H5Pclose(fapl) >= 0);
-}
+    hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+    assert(file >= 0);
+    hid_t dset = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
+                           H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    assert(dset >= 0);
+    assert(H5Dclose(dset) >= 0);
+    assert(H5Fclose(file) >= 0);
+    assert(H5Pclose(fapl) >= 0);
+  }
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -327,7 +352,7 @@ int main(int argc, char** argv)
   //////////////////////////////////////////////////////////////////////////////
   // precreate datasets, as needed
   double start_create = MPI_Wtime();
-  double create_1, create_2, create_3;
+  double create_1=0.0f, create_2=0.0f, create_3=0.0f;
 
   if (precreate)
     {
@@ -339,7 +364,6 @@ int main(int argc, char** argv)
       create_1 = MPI_Wtime();
       file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl);
       assert (file >= 0);
-      record_simulation_attributes(file, processor, chunk);
       MPI_Barrier(MPI_COMM_WORLD);
       create_2 = MPI_Wtime();
       dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, dapl);
@@ -351,7 +375,6 @@ int main(int argc, char** argv)
     {
       file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
       assert(file >= 0);
-      record_simulation_attributes(file, processor, chunk);
       dset_chunked = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
                                H5P_DEFAULT, dcpl, dapl);
       assert(dset_chunked >= 0);
@@ -435,6 +458,20 @@ int main(int argc, char** argv)
            << endl;
 
     }
+
+  // re-open the file and write the simulation attributes
+  // create the fapl
+  //hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+  //assert(fapl >= 0);
+  //assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >= 0);
+  //file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl);
+
+  if (mpi_rank == 0)
+  {
+      file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+      assert (file >= 0);
+      record_simulation_attributes(file, processor, domain, chunk, simulation_time, collective_write, precreate, set_collective_metadata, early_allocation, never_fill);
+  }
 
   MPI_Finalize();
 
