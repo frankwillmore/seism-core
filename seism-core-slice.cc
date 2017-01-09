@@ -29,29 +29,57 @@
 #include <sstream>
 #include <vector>
 
+#include "metadata.hh"
+
 using namespace std;
 
 #define CHUNKED_DSET_NAME "chunked"
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void set_simulation_attributes(hid_t file, unsigned int *processor)
+void record_simulation_attributes(hid_t file, unsigned int *processor,
+                                  unsigned int *chunk_dims)
 {
-    hid_t type_id = H5T_NATIVE_CHAR;
-    const hsize_t current_dims[] = {3};
-    const hsize_t maximum_dims[] = {3};
-    hid_t space_id = H5Screate_simple( 1, current_dims, maximum_dims );
+    // create the inner types
+//    char name[] = "metadata_name";
+    hid_t vls_type_c_id = H5Tcopy(H5T_C_S1);
+    hsize_t adims[] = {3};
+    hid_t dim_h5t = H5Tarray_create(H5T_NATIVE_UINT, 1, adims);
+
+    // create the compound type
+    hid_t metadata_h5t = H5Tcreate(H5T_COMPOUND, sizeof(seism_core_metadata_t)); 
+    H5Tinsert(metadata_h5t, "name", HOFFSET(seism_core_metadata_t, name), 
+                                            vls_type_c_id);
+    H5Tinsert(metadata_h5t, "chunk_dims", HOFFSET(seism_core_metadata_t, 
+                                                  chunk_dims), dim_h5t);
+    H5Tinsert(metadata_h5t, "processor_dims", HOFFSET(seism_core_metadata_t, 
+                                                      processor_dims), dim_h5t);
+    assert(H5Tcommit(file, "metadata_t", metadata_h5t, H5P_DEFAULT, 
+                     H5P_DEFAULT, H5P_DEFAULT) >= 0 );
+           
+    // create scalar dataspace for metadata        
+    hid_t space_id = H5Screate(H5S_SCALAR);
     hid_t acpl_id = H5P_DEFAULT;
     hid_t aapl_id = H5P_DEFAULT;
 
-    hid_t attr_id = H5Acreate2( file, "my_attr", type_id, space_id, acpl_id, aapl_id );
-    hid_t mem_type_id = H5T_NATIVE_INT;
-//    const int buf[] = {12,34,56};
-//    assert(H5Awrite(attr_id, mem_type_id, buf ) >= 0);
-    assert(H5Awrite(attr_id, mem_type_id, processor ) >= 0);
+    // create the attribute
+    hid_t attr_id = H5Acreate( file, "metadata_attr", metadata_h5t, space_id, acpl_id, aapl_id );
 
-    H5Sclose(space_id);
+    // crate a buffer, asign values and write attribute
+    seism_core_metadata_t metadata_buf;
+    metadata_buf.name = "my_metadata";
+    metadata_buf.chunk_dims[0] = 16;
+    metadata_buf.chunk_dims[1] = 32;
+    metadata_buf.chunk_dims[2] = 64;
+    metadata_buf.processor_dims[0] = 16;
+    metadata_buf.processor_dims[1] = 32;
+    metadata_buf.processor_dims[2] = 64;
+    assert(H5Awrite(attr_id, metadata_h5t, &metadata_buf ) >= 0);
+
+    // close resources
     H5Aclose(attr_id);
+    H5Tclose(metadata_h5t);
+    H5Sclose(space_id);
 }
 
 void precreate_0
@@ -285,7 +313,7 @@ int main(int argc, char** argv)
       create_1 = MPI_Wtime();
       file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl);
       assert (file >= 0);
-      set_simulation_attributes(file, processor);
+      record_simulation_attributes(file, processor, chunk);
       MPI_Barrier(MPI_COMM_WORLD);
       create_2 = MPI_Wtime();
       dset_chunked = H5Dopen(file, CHUNKED_DSET_NAME, dapl);
@@ -297,7 +325,7 @@ int main(int argc, char** argv)
     {
       file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
       assert(file >= 0);
-      set_simulation_attributes(file, processor);
+      record_simulation_attributes(file, processor, chunk);
       dset_chunked = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
                                H5P_DEFAULT, dcpl, dapl);
       assert(dset_chunked >= 0);

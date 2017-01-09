@@ -1,4 +1,5 @@
 seism-core
+seism-core-slice
 seism-core-slice-*
 *.o
 *.h5

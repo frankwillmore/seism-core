@@ -17,18 +17,18 @@ seism-core-slice: seism-core-slice.o
 #	/mnt/wrk/Frank.Willmore/usr/local/hdf5-1.10.0-install/bin/h5pcc seism-core-slice.cc -Wall -pedantic -O2 -std=c++0x -I/mnt/wrk/Frank.Willmore/usr/local/hdf5-1.10.0-install/include -o seism-core-slicexx -lstdc++ -L/mnt/wrk/Frank.Willmore/usr/local/hdf5-1.10.0-install/lib -lhdf5 
 #	mpicxx -Wall -std=c++0x -I/mnt/wrk/Frank.Willmore/usr/local/phdf5/include seism-core-slice.o -o seism-core-slicexx -lstdc++ -L/mnt/wrk/Frank.Willmore/usr/local/phdf5/lib -lhdf5 
 
-check: seism-core
+#check: seism-core
 #	mpiexec -n 8 ./seism-core < tests/check.in
-	mpiexec -n 8 ./seism-core < tests/precreate-1.in
-	mpiexec -n 8 ./seism-core < tests/precreate1.in
-	mpiexec -n 8 ./seism-core < tests/precreate0.in
+#	mpiexec -n 8 ./seism-core < tests/precreate-1.in
+#	mpiexec -n 8 ./seism-core < tests/precreate1.in
+#	mpiexec -n 8 ./seism-core < tests/precreate0.in
 
 check-slice: seism-core-slice
 #	mpiexec -n 8 ./seism-core-slice < tests/jelly/precreate0.in
 	mpiexec -n 8 ./seism-core-slice < tests/jelly/check-8-pre
-	mpiexec -n 16 ./seism-core-slice < tests/jelly/check-16-pre
-	mpiexec -n 32 ./seism-core-slice < tests/jelly/check-32-pre
-	mpiexec -n 64 ./seism-core-slice < tests/jelly/check-64-pre
+#	mpiexec -n 16 ./seism-core-slice < tests/jelly/check-16-pre
+#	mpiexec -n 32 ./seism-core-slice < tests/jelly/check-32-pre
+#	mpiexec -n 64 ./seism-core-slice < tests/jelly/check-64-pre
 
 seism-core.o: seism-core.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
