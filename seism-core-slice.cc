@@ -9,13 +9,19 @@
 // 3. The voxel resolution (per process).
 // 4. The number of time steps (>= 1) to be written.
 //
-// An example input script is shown below:
+// An example input script is shown below. Binary options are set by 
+// presence or absence of corresponding line:
 //
 // mpiexec -n 8 ./seism-core << EOF
 // processor 2 2 2
 // chunk 180 64 64
 // domain 180 64 64
 // time 2
+// collective_write
+// precreate
+// set_collective_metadata
+// early_allocation
+// never_fill
 // DONE
 // EOF
 //
@@ -29,7 +35,7 @@
 #include <sstream>
 #include <vector>
 
-#include "metadata.hh"
+#include "seism-core-attributes.hh"
 
 using namespace std;
 
@@ -41,44 +47,43 @@ void record_simulation_attributes(hid_t file, unsigned int *processor,
                                   unsigned int *chunk_dims)
 {
     // create the inner types
-//    char name[] = "metadata_name";
     hid_t vls_type_c_id = H5Tcopy(H5T_C_S1);
     hsize_t adims[] = {3};
     hid_t dim_h5t = H5Tarray_create(H5T_NATIVE_UINT, 1, adims);
 
     // create the compound type
-    hid_t metadata_h5t = H5Tcreate(H5T_COMPOUND, sizeof(seism_core_metadata_t)); 
-    H5Tinsert(metadata_h5t, "name", HOFFSET(seism_core_metadata_t, name), 
+    hid_t attributes_h5t = H5Tcreate(H5T_COMPOUND, sizeof(seism_core_attributes_t)); 
+    H5Tinsert(attributes_h5t, "name", HOFFSET(seism_core_attributes_t, name), 
                                             vls_type_c_id);
-    H5Tinsert(metadata_h5t, "chunk_dims", HOFFSET(seism_core_metadata_t, 
+    H5Tinsert(attributes_h5t, "chunk_dims", HOFFSET(seism_core_attributes_t, 
                                                   chunk_dims), dim_h5t);
-    H5Tinsert(metadata_h5t, "processor_dims", HOFFSET(seism_core_metadata_t, 
+    H5Tinsert(attributes_h5t, "processor_dims", HOFFSET(seism_core_attributes_t, 
                                                       processor_dims), dim_h5t);
-    assert(H5Tcommit(file, "metadata_t", metadata_h5t, H5P_DEFAULT, 
+    assert(H5Tcommit(file, "attributes_t", attributes_h5t, H5P_DEFAULT, 
                      H5P_DEFAULT, H5P_DEFAULT) >= 0 );
            
-    // create scalar dataspace for metadata        
+    // create scalar dataspace for attributes        
     hid_t space_id = H5Screate(H5S_SCALAR);
     hid_t acpl_id = H5P_DEFAULT;
     hid_t aapl_id = H5P_DEFAULT;
 
     // create the attribute
-    hid_t attr_id = H5Acreate( file, "metadata_attr", metadata_h5t, space_id, acpl_id, aapl_id );
+    hid_t attr_id = H5Acreate( file, "simulation_attributes", attributes_h5t, space_id, acpl_id, aapl_id );
 
     // crate a buffer, asign values and write attribute
-    seism_core_metadata_t metadata_buf;
-    metadata_buf.name = "my_metadata";
-    metadata_buf.chunk_dims[0] = 16;
-    metadata_buf.chunk_dims[1] = 32;
-    metadata_buf.chunk_dims[2] = 64;
-    metadata_buf.processor_dims[0] = 16;
-    metadata_buf.processor_dims[1] = 32;
-    metadata_buf.processor_dims[2] = 64;
-    assert(H5Awrite(attr_id, metadata_h5t, &metadata_buf ) >= 0);
+    seism_core_attributes_t attributes_buf;
+    attributes_buf.name = "my_attributes";
+    attributes_buf.chunk_dims[0] = 16;
+    attributes_buf.chunk_dims[1] = 32;
+    attributes_buf.chunk_dims[2] = 64;
+    attributes_buf.processor_dims[0] = 16;
+    attributes_buf.processor_dims[1] = 32;
+    attributes_buf.processor_dims[2] = 64;
+    assert(H5Awrite(attr_id, attributes_h5t, &attributes_buf ) >= 0);
 
     // close resources
     H5Aclose(attr_id);
-    H5Tclose(metadata_h5t);
+    H5Tclose(attributes_h5t);
     H5Sclose(space_id);
 }
 
@@ -93,7 +98,6 @@ void precreate_0
   assert(fapl >= 0);
   assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
          0);
-  assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
 
   hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
   assert(file >= 0);
@@ -136,8 +140,11 @@ int main(int argc, char** argv)
   // rank 0 reads the input file, then broadcasts
   string parameter, rest_of_line;
   unsigned int simulation_time, processor[3], chunk[3], domain[3];
-  int mpi_collective_io_int = 0;
-  int precreate_int = 0;
+  int collective_write = 0;
+  int precreate = 0;
+  int set_collective_metadata = 0;
+  int early_allocation = 0;
+  int never_fill = 0;
 
   if (mpi_rank==0)
     {
@@ -154,10 +161,16 @@ int main(int argc, char** argv)
           cin >> domain[0] >> domain[1] >> domain[2];
         if (!parameter.compare("time"))
           cin >> simulation_time;
-        if (!parameter.compare("use_collective"))
-          mpi_collective_io_int = true;
+        if (!parameter.compare("collective_write"))
+          collective_write = true;
         if (!parameter.compare("precreate"))
-          precreate_int = true;
+          precreate = true;
+        if (!parameter.compare("set_collective_metadata"))
+          set_collective_metadata = true;
+        if (!parameter.compare("early_allocation"))
+          early_allocation = true;
+        if (!parameter.compare("never_fill"))
+          never_fill = true;
         getline(cin, rest_of_line); // read the rest of the line
       }
     }
@@ -168,12 +181,16 @@ int main(int argc, char** argv)
          MPI_SUCCESS);
   assert(MPI_Bcast(&chunk, 3, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
   assert(MPI_Bcast(&domain, 3, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
-  assert(MPI_Bcast(&mpi_collective_io_int, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+  assert(MPI_Bcast(&collective_write, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
          MPI_SUCCESS);
-  assert(MPI_Bcast(&precreate_int, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+  assert(MPI_Bcast(&precreate, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
          MPI_SUCCESS);
-  bool coll_flg = (bool)mpi_collective_io_int;// flg for collective I/O
-  bool pre_flg = (bool)precreate_int;
+  assert(MPI_Bcast(&set_collective_metadata, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+         MPI_SUCCESS);
+  assert(MPI_Bcast(&early_allocation, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+         MPI_SUCCESS);
+  assert(MPI_Bcast(&never_fill, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+         MPI_SUCCESS);
 
   // check the arguments
   assert(time > 0);
@@ -185,16 +202,20 @@ int main(int argc, char** argv)
   if (mpi_rank == 0)
     {
       cout << "================================================================================" << endl;
-      cout << "Number of processes:\t" << mpi_size << endl;
-      cout << "Process layout:\t\t" << processor[0] << " x " <<
+      cout << "Number of processes:\t\t" << mpi_size << endl;
+      cout << "Process layout:\t\t\t" << processor[0] << " x " <<
         processor[1] << " x " << processor[2] << endl;
-      cout << "Per process grid:\t" << domain[0] << " x " << domain[1] <<
+      cout << "Per process grid:\t\t" << domain[0] << " x " << domain[1] <<
         " x " << domain[2] << endl;
-      cout << "Chunk dimensions:\t" << chunk[0] << " x " << chunk[1] <<
+      cout << "Chunk dimensions:\t\t" << chunk[0] << " x " << chunk[1] <<
         " x " << chunk[2] << endl;
-      cout << "Number of time steps:\t" << simulation_time << endl;
-      cout << "Collective I/O:\t\t" << coll_flg << endl;
-      cout << "Pre-create:\t\t" << pre_flg << endl;
+      cout << "Number of time steps:\t\t" << simulation_time << endl;
+      cout << "Pre-create:\t\t\t" << precreate << endl;
+      cout << "Collective I/O:\t\t\t" << collective_write << endl;
+      cout << "Collective metadata requested:\t" << set_collective_metadata 
+          << endl;
+      cout << "Early allocation:\t\t" << early_allocation << endl;
+      cout << "H5D_FILL_TIME_NEVER set:\t" << never_fill << endl;
       cout << endl;
     }
 
@@ -219,10 +240,13 @@ int main(int argc, char** argv)
   cdims[2] = chunk[1];
   cdims[3] = chunk[2];
 
+  // create dcpl and set properties
   hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
   assert(dcpl >= 0);
   assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
-  assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
+  if (never_fill) assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
+  if (early_allocation) 
+      assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
 
   hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
   assert(dapl >= 0);
@@ -247,7 +271,7 @@ int main(int argc, char** argv)
   //////////////////////////////////////////////////////////////////////////////
   // data transfer property list for collective I/O, if selected
   hid_t dxpl = H5P_DEFAULT;
-  if (coll_flg)
+  if (collective_write)
     {
       dxpl = H5Pcreate(H5P_DATASET_XFER);
       assert(H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE) >= 0);
@@ -276,13 +300,15 @@ int main(int argc, char** argv)
   assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
          0);
 
-#if (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 10) 
-  assert(H5Pset_all_coll_metadata_ops(fapl, true) >=0 );
-  assert(H5Pset_all_coll_metadata_ops(dapl, true) >=0 );
-#endif
+  // set collective metadata reads
+  if ((H5_VERS_MAJOR == 1) && (H5_VERS_MINOR >= 10) && set_collective_metadata)
+    {
+      assert(H5Pset_all_coll_metadata_ops(fapl, true) >=0 );
+      assert(H5Pset_all_coll_metadata_ops(dapl, true) >=0 );
+    }
 
   MPI_Info info;
-  if (coll_flg)
+  if (collective_write)
     {
       setMPI_Info(info, v.size(), mpi_size);
     }
@@ -303,7 +329,7 @@ int main(int argc, char** argv)
   double start_create = MPI_Wtime();
   double create_1, create_2, create_3;
 
-  if (pre_flg)
+  if (precreate)
     {
       if (mpi_rank == 0) // create with process 0, then close & re-open
         {
@@ -360,8 +386,9 @@ int main(int argc, char** argv)
   assert(H5Pclose(dxpl) >= 0);
   assert(H5Sclose(fspace) >= 0);
   assert(H5Pclose(dcpl) >= 0);
-  hbool_t is_collective;
-  H5Pget_all_coll_metadata_ops( dapl, &is_collective );
+  // verify that metadata ops actually performed collectively
+  hbool_t actual_metadata_ops_collective;
+  H5Pget_all_coll_metadata_ops( dapl, &actual_metadata_ops_collective );
   assert(H5Pclose(dapl) >= 0);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -377,7 +404,7 @@ int main(int argc, char** argv)
       size_t bytes_written = simulation_time * processor[0] * domain[0] *
         processor[1] * domain[1] *  processor[2] * domain[2] * sizeof(float);
 
-      if (pre_flg)
+      if (precreate)
         {
           cout << "Pre-c";
         }
@@ -385,26 +412,26 @@ int main(int argc, char** argv)
         {
           cout << "C";
         }
-      cout << "reate/open:\t";
-      if (!pre_flg) { cout << "\t";}
+      cout << "reate/open:\t\t";
+      if (!precreate) { cout << "\t";}
       cout << (stop_create - start_create) << " s" << endl;
-      if (pre_flg)
+      if (precreate)
       {
-          cout << "Time in precreate_0():\t"  << (create_1 - start_create) << " s" << endl;
-          cout << "Time in H5Fopen():\t"  << (create_2 - create_1) << " s" << endl;
-          cout << "Time in H5Dopen():\t"  << (create_3 - create_2) << " s" << endl;
+          cout << "Time in precreate_0():\t\t"  << (create_1 - start_create) << " s" << endl;
+          cout << "Time in H5Fopen():\t\t"  << (create_2 - create_1) << " s" << endl;
+          cout << "Time in H5Dopen():\t\t"  << (create_3 - create_2) << " s" << endl;
       }
-      cout << "Write:\t\t\t" <<
+      cout << "Write:\t\t\t\t" <<
         (stop_chunked - start_chunked) << " s" << endl;
-      cout << "Write throughput:\t" << bytes_written /
+      cout << "Write throughput:\t\t" << bytes_written /
         (stop_chunked - start_chunked) / ((double) (1<<20)) << " MB/s"
            << endl;
-      cout << "Close file:\t\t" << (fclose_stop - fclose_start) << " s"
+      cout << "Close file:\t\t\t" << (fclose_stop - fclose_start) << " s"
            << endl;
-      cout << "Aggregate throughput:\t" << bytes_written /
+      cout << "Aggregate throughput:\t\t" << bytes_written /
         (fclose_stop - begin) / ((double) (1<<20)) << " MB/s"
            << endl;
-      cout << "Mdata ops collective:\t" << is_collective
+      cout << "Mdata ops actually collective:\t" << actual_metadata_ops_collective
            << endl;
 
     }
@@ -413,3 +440,4 @@ int main(int argc, char** argv)
 
   return 0;
 }
+
