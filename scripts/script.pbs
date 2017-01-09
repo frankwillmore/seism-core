@@ -10,6 +10,7 @@
 
 . processor_geometry.sh
 
+# by default, everything is off
 PRECREATE=
 COLLECTIVE_WRITE=
 SET_COLLECTIVE_METADATA=
@@ -18,54 +19,50 @@ NEVER_FILL=
 
 #==== edit this section ======================================================
 
-# set value for RUNNING_ON_BW 
-export RUNNING_ON_BW=YES 
+# set any non-empty value if RUNNING_ON_BW 
+RUNNING_ON_BW=
 # set what processor configurations (first num is ignored on jelly)
-#CONFIGURATIONS="8_8 8_16 8_32 8_64 8_128 8_256"
 CONFIGURATIONS="8_8 8_16 8_32"
 
-#PRECREATE=precreate
-#COLLECTIVE_WRITE=collective_write
-#SET_COLLECTIVE_METADATA=set_collective_metadata
-#EARLY_ALLOCATION=early_allocation
-#NEVER_FILL=never_fill
+PRECREATE=precreate
+COLLECTIVE_WRITE=collective_write
+SET_COLLECTIVE_METADATA=set_collective_metadata
+EARLY_ALLOCATION=early_allocation
+NEVER_FILL=never_fill
 TIME_STEPS=5
 
 #=== do not edit below =======================================================
 
 rm -f seism-test.h5
 
-#. ~/local/build_hdf5/NCSA_Blue_Waters/env_hdf5-1.10.0.sh
-module load cray-hdf5-parallel/1.10.0 
-module unload darshan
-ldd $SEISM_CORE
 
-#for config in "8 8" "8 16" "8 32" "8 64" "8 128" "8 256" 
 for config in `echo $CONFIGURATIONS`
 do
     ppn=`echo $config | awk '{split($0, a, "_"); print a[1]}'`
     processors=`echo $config | awk '{split($0, a, "_"); print a[2]}'`
     p_geom=`processor_geometry $processors` 
 
-printf "###\t %d processors" $processors 
-printf "\n"
+    printf "###\t %d processors, %d per node\n" $processors $ppn
 
-if [ "$RUNNING_ON_BW"x == x ]; then
-    echo "running on jelly... "
-    MPI_COMMAND=mpiexec
-    SEISM_CORE=$WORK/bw/seism-core/seism-core-slice
-    SCRIPTS_DIR=$WORK/bw/seism-core/scripts
-    LAUNCH_COMMAND="$MPI_COMMAND -n $processors"
-else
-    echo "running on BW... "
-    MPI_COMMAND=aprun
-    SEISM_CORE=/u/sciteam/willmore/seism-core/seism-core-slice
-    SCRIPTS_DIR=/u/sciteam/willmore/seism-core/seism-core-slice/scripts
-    lfs setstripe -s 1048576 -c 1 seism-test.h5 
-    LAUNCH_COMMAND="$MPI_COMMAND -N$ppn -n $processors"
-fi
+    if [ "$RUNNING_ON_BW"x == x ]; then
+        echo "running on jelly... "
+        MPI_COMMAND=mpiexec
+        SEISM_CORE=$WORK/bw/seism-core/seism-core-slice
+        SCRIPTS_DIR=$WORK/bw/seism-core/scripts
+        LAUNCH_COMMAND="$MPI_COMMAND -n $processors $SEISM_CORE"
+    else
+        echo "running on BW... "
+        #. ~/local/build_hdf5/NCSA_Blue_Waters/env_hdf5-1.10.0.sh
+        module load cray-hdf5-parallel/1.10.0 
+        module unload darshan
+        ldd $SEISM_CORE
+        MPI_COMMAND=aprun
+        SEISM_CORE=/u/sciteam/willmore/seism-core/seism-core-slice
+        SCRIPTS_DIR=/u/sciteam/willmore/seism-core/seism-core-slice/scripts
+        lfs setstripe -s 1048576 -c 1 seism-test.h5 
+        LAUNCH_COMMAND="$MPI_COMMAND -N$ppn -n $processors $SEISM_CORE"
+    fi
 
-#    aprun -N$ppn -n$processors $SEISM_CORE << EOF 
 $LAUNCH_COMMAND << EOF
 processor $p_geom
 chunk 160 80 2048
@@ -81,4 +78,3 @@ EOF
 
 # done with this processor configuration, end of for...do...done loop
 done
-
