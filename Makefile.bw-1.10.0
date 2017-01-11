@@ -26,6 +26,7 @@ seism-core-slice-patch: seism-core-slice.cc
 # module unload darshan
 seism-core-slice-bw: seism-core-slice.cc
 	CC -DCRAYCC -dynamic -O2 -lhdf5 seism-core-slice.cc -o seism-core-slice-bw
+	ln -s seism-core-slice-bw seism-core-slice
 
 
 check-slice: seism-core-slice
