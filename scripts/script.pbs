@@ -22,7 +22,7 @@ NEVER_FILL=
 # set any non-empty value if RUNNING_ON_BW 
 RUNNING_ON_BW=
 # set what processor configurations (first num is ignored on jelly)
-CONFIGURATIONS="8_8 8_16 8_16"
+CONFIGURATIONS="8_8 8_16 8_32 8_64"
 
 PRECREATE=precreate
 COLLECTIVE_WRITE=collective_write
@@ -63,6 +63,8 @@ do
         LAUNCH_COMMAND="$MPI_COMMAND -N$ppn -n $processors $SEISM_CORE"
     fi
 
+    echo "launching... "
+
 $LAUNCH_COMMAND << EOF
 processor $p_geom
 chunk 160 80 2048
@@ -75,6 +77,8 @@ $EARLY_ALLOCATION
 $NEVER_FILL
 DONE
 EOF
+
+    echo "done... "
 
 # done with this processor configuration, end of for...do...done loop
 done

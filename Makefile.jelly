@@ -23,6 +23,10 @@ seism-core-slice: seism-core-slice.o
 #	mpiexec -n 8 ./seism-core < tests/precreate1.in
 #	mpiexec -n 8 ./seism-core < tests/precreate0.in
 
+32:
+	mpiexec -n 64 ./seism-core-slice < tests/jelly/check.in
+
+
 check-slice: seism-core-slice
 	mpiexec -n 8 ./seism-core-slice < tests/jelly/check.in
 #	mpiexec -n 8 ./seism-core-slice < tests/jelly/precreate0.in

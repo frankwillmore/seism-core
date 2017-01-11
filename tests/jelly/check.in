@@ -1,13 +1,13 @@
 # default test set
-processor 2 2 2
+processor 4 4 4
 chunk 360 128 128
 domain 180 128 128
 time 5
-collective_write
 precreate
-set_collective_metadata
-early_allocation
-never_fill
+#collective_write
+#set_collective_metadata
+#early_allocation
+#never_fill
 DONE
 
 
