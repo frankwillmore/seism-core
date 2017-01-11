@@ -1,6 +1,7 @@
 seism-core
 seism-core-slice
 seism-core-slice-*
+seism-core-test
 *.o
 *.h5
 Makefile

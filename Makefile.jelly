@@ -30,9 +30,12 @@ seism-core-slice.o: seism-core-slice.cc
 seism-core-attributes.o: seism-core-attributes.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+seism-core-test: seism-core-test.cc seism-core-attributes.o
+	$(CXX) $(CXXFLAGS) seism-core-test.cc seism-core-attributes.o -o seism-core-test -lstdc++
+
 clean:
 	rm -f *.o *.h5
 
 veryclean: clean
-	rm -f seism-core seism-core-slice seism-core-slicexx
+	rm -f seism-core seism-core-slice seism-core-slicexx seism-core-test
 
