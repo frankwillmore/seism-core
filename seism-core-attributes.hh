@@ -13,4 +13,29 @@ typedef struct {
     int never_fill;
 } seism_core_attributes_t;
 
+void record_simulation_attributes(
+        hid_t file,
+        unsigned int *processor_dims,
+        unsigned int *domain_dims,
+        unsigned int *chunk_dims,
+        unsigned int simulation_time,
+        int collective_write,
+        int precreate,
+        int set_collective_metadata,
+        int early_allocation,
+        int never_fill
+        ) ;
+
+void recall_simulation_attributes(
+        hid_t file,
+        unsigned int **processor_dims,
+        unsigned int **domain_dims,
+        unsigned int **chunk_dims,
+        unsigned int *simulation_time,
+        int *collective_write,
+        int *precreate,
+        int *set_collective_metadata,
+        int *early_allocation,
+        int *never_fill
+        ) ;
 

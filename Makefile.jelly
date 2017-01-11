@@ -10,22 +10,8 @@ all: seism-core-slice
 seism-core: seism-core.o
 	$(CXX) $(CXXFLAGS) seism-core.o -o $@ -lstdc++
 
-seism-core-slice: seism-core-slice.o
-	$(CXX) $(CXXFLAGS) seism-core-slice.o -o $@ -lstdc++
-
-#seism-core-slicexx: seism-core-slice.cc
-#	/mnt/wrk/Frank.Willmore/usr/local/hdf5-1.10.0-install/bin/h5pcc seism-core-slice.cc -Wall -pedantic -O2 -std=c++0x -I/mnt/wrk/Frank.Willmore/usr/local/hdf5-1.10.0-install/include -o seism-core-slicexx -lstdc++ -L/mnt/wrk/Frank.Willmore/usr/local/hdf5-1.10.0-install/lib -lhdf5 
-#	mpicxx -Wall -std=c++0x -I/mnt/wrk/Frank.Willmore/usr/local/phdf5/include seism-core-slice.o -o seism-core-slicexx -lstdc++ -L/mnt/wrk/Frank.Willmore/usr/local/phdf5/lib -lhdf5 
-
-#check: seism-core
-#	mpiexec -n 8 ./seism-core < tests/check.in
-#	mpiexec -n 8 ./seism-core < tests/precreate-1.in
-#	mpiexec -n 8 ./seism-core < tests/precreate1.in
-#	mpiexec -n 8 ./seism-core < tests/precreate0.in
-
-32:
-	mpiexec -n 64 ./seism-core-slice < tests/jelly/check.in
-
+seism-core-slice: seism-core-slice.o seism-core-attributes.o
+	$(CXX) $(CXXFLAGS) seism-core-attributes.o seism-core-slice.o -o $@ -lstdc++
 
 check-slice: seism-core-slice
 	mpiexec -n 8 ./seism-core-slice < tests/jelly/check.in
@@ -39,6 +25,9 @@ seism-core.o: seism-core.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 seism-core-slice.o: seism-core-slice.cc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+seism-core-attributes.o: seism-core-attributes.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
