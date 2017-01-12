@@ -6,16 +6,20 @@
 
 using namespace std;
 
-void seismCoreAttributes::writeAttributesToFile(hid_t file_id)
+void seismCoreAttributes::init()
 {
+    cout << "calling init()" << endl;
+
     // create the inner array and character types
-    hid_t vls_type_c_id = H5Tcopy(H5T_C_S1);
+    vls_type_c_id = H5Tcopy(H5T_C_S1);
     H5Tset_size(vls_type_c_id, H5T_VARIABLE);
     hsize_t adims[] = {3};
-    hid_t dim_h5t = H5Tarray_create(H5T_NATIVE_UINT, 1, adims);
+    dim_h5t = H5Tarray_create(H5T_NATIVE_UINT, 1, adims);
+    
+    cout << "attributes_h5t not yet created = " << attributes_h5t << endl; 
 
-    // create the compound type
-    hid_t attributes_h5t = H5Tcreate(H5T_COMPOUND, sizeof(seismCoreAttributes)); 
+    attributes_h5t = H5Tcreate(H5T_COMPOUND, sizeof(seismCoreAttributes)); 
+    cout << "attributes_h5t created = " << attributes_h5t << endl; 
     H5Tinsert(attributes_h5t, "name", HOFFSET(seismCoreAttributes, name), vls_type_c_id);
     H5Tinsert(attributes_h5t, "processor_dims", HOFFSET(seismCoreAttributes, processor_dims), dim_h5t);
     H5Tinsert(attributes_h5t, "chunk_dims", HOFFSET(seismCoreAttributes, chunk_dims), dim_h5t);
@@ -27,8 +31,18 @@ void seismCoreAttributes::writeAttributesToFile(hid_t file_id)
     H5Tinsert(attributes_h5t, "early_allocation", HOFFSET(seismCoreAttributes, early_allocation), H5T_NATIVE_INT);
     H5Tinsert(attributes_h5t, "never_fill", HOFFSET(seismCoreAttributes, never_fill), H5T_NATIVE_INT);
 
+    // data types that are in the class... 
+//    H5Tinsert(attributes_h5t, "vls_type_c_id", HOFFSET(seismCoreAttributes, vls_type_c_id), H5T_NATIVE_INT);
+//    H5Tinsert(attributes_h5t, "dim_h5t", HOFFSET(seismCoreAttributes, dim_h5t), H5T_NATIVE_INT);
+//    H5Tinsert(attributes_h5t, "attributes_h5t", HOFFSET(seismCoreAttributes, attributes_h5t), H5T_NATIVE_INT);
+}
+
+// the object has been created and initialized before calling this 
+void seismCoreAttributes::writeAttributesToFile(hid_t file_id)
+{
     // commit the compound type to HDF5 file
-    assert(H5Tcommit(file_id, "attributes_t", attributes_h5t, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) >= 0 );
+    cout << "???" << attributes_h5t << endl;
+    assert(H5Tcommit(file_id, "seismCoreAttributes", attributes_h5t, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) >= 0 );
     
     // create scalar dataspace for attributes        
     hid_t space_id = H5Screate(H5S_SCALAR);
@@ -38,21 +52,15 @@ void seismCoreAttributes::writeAttributesToFile(hid_t file_id)
     // create the attribute
     hid_t attr_id = H5Acreate( file_id, "simulation_attributes", attributes_h5t, space_id, acpl_id, aapl_id );
 
-    // crate a buffer, asign values and write attribute
-//    char *attr_name = (char*)"my_attributes";
-//    seismCoreAttributes attributes_buf(attr_name, processor_dims, chunk_dims, domain_dims, simulation_time, collective_write, precreate, set_collective_metadata, early_allocation, never_fill);
-//    assert(H5Awrite(attr_id, attributes_h5t, &attributes_buf ) >= 0); 
-    std::cout << "name:" << this->name << std::endl;
-    std::cout << "processor_dims:" << this->processor_dims << std::endl;
+    // write attribute
     assert(H5Awrite(attr_id, attributes_h5t, this) >= 0); 
 
-    // close resources
+    // close resources 
     H5Aclose(attr_id);
-    H5Tclose(attributes_h5t);
     H5Sclose(space_id);
 }
 
-
+// constructor to create attributes object from current sim data
 seismCoreAttributes::seismCoreAttributes
 (
     char * _name,
@@ -83,47 +91,49 @@ seismCoreAttributes::seismCoreAttributes
     set_collective_metadata = _set_collective_metadata;
     early_allocation = _early_allocation;
     never_fill = _never_fill;
+
+    init();
 }
 
+// constructor for loading seismCoreAttributes from file
 seismCoreAttributes::seismCoreAttributes(hid_t file_id)
 {
     cout << "constructing from file" << endl;
 
-    // create the inner array and character types
-    hid_t vls_type_c_id = H5Tcopy(H5T_C_S1);
-    H5Tset_size(vls_type_c_id, H5T_VARIABLE);
-    hsize_t adims[] = {3};
-    hid_t dim_h5t = H5Tarray_create(H5T_NATIVE_UINT, 1, adims);
+    cout << "before init()" <<endl;
+    cout << "attributes_h5t=" << attributes_h5t << endl;
+    init();
+    cout << "after init()" <<endl;
+    cout << "attributes_h5t=" << attributes_h5t << endl;
 
-    // create the compound type
-    hid_t attributes_h5t = H5Tcreate(H5T_COMPOUND, sizeof(seismCoreAttributes)); 
-    H5Tinsert(attributes_h5t, "name", HOFFSET(seismCoreAttributes, name), vls_type_c_id);
-    H5Tinsert(attributes_h5t, "processor_dims", HOFFSET(seismCoreAttributes, processor_dims), dim_h5t);
-    H5Tinsert(attributes_h5t, "chunk_dims", HOFFSET(seismCoreAttributes, chunk_dims), dim_h5t);
-    H5Tinsert(attributes_h5t, "domain_dims", HOFFSET(seismCoreAttributes, domain_dims), dim_h5t);
-    H5Tinsert(attributes_h5t, "simulation_time", HOFFSET(seismCoreAttributes, simulation_time), H5T_NATIVE_UINT);
-    H5Tinsert(attributes_h5t, "collective_write", HOFFSET(seismCoreAttributes, collective_write), H5T_NATIVE_INT);
-    H5Tinsert(attributes_h5t, "precreate", HOFFSET(seismCoreAttributes, precreate), H5T_NATIVE_INT);
-    H5Tinsert(attributes_h5t, "set_collective_metadata", HOFFSET(seismCoreAttributes, set_collective_metadata), H5T_NATIVE_INT);
-    H5Tinsert(attributes_h5t, "early_allocation", HOFFSET(seismCoreAttributes, early_allocation), H5T_NATIVE_INT);
-    H5Tinsert(attributes_h5t, "never_fill", HOFFSET(seismCoreAttributes, never_fill), H5T_NATIVE_INT);
+    // stash the values of attributes_h5t, vls_type_c_id, and dim_h5t
+    // before overwriting with values from file
+    hid_t _attributes_h5t = attributes_h5t;
+    hid_t _vls_type_c_id = vls_type_c_id;
+    hid_t _dim_h5t = dim_h5t;
 
     // open the attribute, and read info into a buffer
     hid_t aapl_id = H5P_DEFAULT;
     hid_t lapl_id = H5P_DEFAULT;
     hid_t attr_id = H5Aopen_by_name( file_id, "/", "simulation_attributes", aapl_id, lapl_id );
     assert(attr_id >= 0);
-//    info_t buf;
-//    assert( H5Aread(attr_id, compound_t, &buf ) >= 0);
     assert( H5Aread(attr_id, attributes_h5t, this ) >= 0);
 
-//    int i;
-//    for (i=0;i<3;i++) printf("%d\n", buf.dims[i]);
-//    printf("\nname=%s\n", buf.name);
+    // pop the stashed values
+    attributes_h5t = _attributes_h5t;
+    vls_type_c_id = _vls_type_c_id;
+    dim_h5t = _dim_h5t;
 
     H5Aclose(attr_id);
+}
+
+seismCoreAttributes::~seismCoreAttributes()
+{
+    cout << "destructing... " << endl;
+    // close resources 
+    cout << "attributes_h5t=" << attributes_h5t << endl;
     H5Tclose(attributes_h5t);
-    H5Tclose(vls_type_c_id);
-    H5Tclose(dim_h5t);
+    H5Tclose(vls_type_c_id); 
+    H5Tclose(dim_h5t); 
 }
  

@@ -32,6 +32,7 @@ class seismCoreAttributes
         int early_allocation;
         int never_fill;
 
+        // constructor to create a new attributes object from simulation
         seismCoreAttributes
         (
             char * _name,
@@ -46,12 +47,24 @@ class seismCoreAttributes
             int _never_fill
         );
 
+        // constructor to read attributes object from a file
         seismCoreAttributes(hid_t file_id);
 
+        // called at end of simulation to write attributes out
         void writeAttributesToFile(hid_t file_id);
 
-        ~seismCoreAttributes()
-        {
-        };
+        // destructor will free H5 resources
+        ~seismCoreAttributes();
+
+//    private:
+
+        hid_t vls_type_c_id; // compound type
+        hid_t dim_h5t; // dimension type
+        hid_t attributes_h5t; // attributes type
+//        hid_t space_id; // dataspace
+//        hid_t attr_id; // atribute
+
+        void init(); // create H5 objects used internally
+
 };
 

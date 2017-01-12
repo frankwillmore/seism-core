@@ -55,40 +55,89 @@ int main(int argc, char** argv)
 
     // open file and read the attributes
     hid_t file = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
+    assert(file >= 0);
+    cout << "creating attributes in main:" << endl;
     seismCoreAttributes attr(file);
 
-    cout << attr.name << endl;
+    //cout << "attr.name: " << attr.name << endl;
+    cout << "in main after declaration, attr.attributes_h5t: " << attr.attributes_h5t << endl;
 
+    cout << attr.name << endl;
+    cout << attr.processor_dims[0] << endl;
+    cout << attr.processor_dims[1] << endl;
+    cout << attr.processor_dims[2] << endl;
+//    cout << attr.chunk_dims[0] << endl;
+//    cout << attr.chunk_dims[1] << endl;
+//    cout << attr.chunk_dims[2] << endl;
+    cout << attr.domain_dims[0] << endl;
+    cout << attr.domain_dims[1] << endl;
+    cout << attr.domain_dims[2] << endl;
+    cout << attr.simulation_time << endl;
+    cout << attr.collective_write << endl;
+    cout << attr.precreate << endl;
+
+
+    // file is open, we have the attributes, etc. now get the data
+
+    // loop over processor geom
+    for (unsigned int t=0; t<attr.simulation_time; t++) {
+        // create a buffer to hold one domain worth of junk
+        int ***buffer = (int ***)malloc(sizeof(int) * attr.domain_dims[0] * attr.domain_dims[1] * attr.domain_dims[2]); 
+
+        // open the dataset
+        dset = H5Dopen (file, CHUNKED_DSET_NAME, H5P_DEFAULT);
+
+        // read the dataset into the buffer
+        assert( H5Dread (dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buffer) >= 0);
+
+        unsigned int grand_sum=0;
+        for (unsigned int i=0; i<processor_dims[0]; i++)
+            for (unsigned int j=0; j<processor_dims[1]; j++)
+                for (unsigned int k=0; k<processor_dims[2]; k++)
+                    grand_sum += 0; // expression for buffer, something like [i*domain_dims[0]*domain_dims[1] + j*domain_dims[1] + k]; 
+
+        // compare the grand sum to what it should be.. i.e. number of elements * rank
+        int mpi_rank = i*processor_dims[1]*processor_dims[2] + j * processor_dims[1] + k *pro ... gaaah!
+
+
+
+
+
+    hid_t space = H5Dget_space (dset);
+    start[0] = 0;
+    start[1] = 1;
+    stride[0] = 4;
+    stride[1] = 4;
+    count[0] = 2;
+    count[1] = 2;
+    block[0] = 2;
+    block[1] = 3;
+    status = H5Sselect_hyperslab (space, H5S_SELECT_SET, start, stride, count, block);
+
+        // select hyperslab
+        // read the data
+
+        // loop and sum over domain dims 
+
+
+    }
+
+    /*
+    unsigned int processor_dims[3];
+    unsigned int chunk_dims[3];
+    unsigned int domain_dims[3];
+    unsigned int simulation_time;
+    int collective_write;
+    int precreate;
+    int set_collective_metadata;
+    int early_allocation;
+    int never_fill;
+    */
+
+    H5Fclose(file);
 }
 
 /*
-
-
-
-
-
-
-      cout << "================================================================================" << endl;
-      cout << "Number of processes:\t\t" << mpi_size << endl;
-      cout << "Process layout:\t\t\t" << processor[0] << " x " <<
-        processor[1] << " x " << processor[2] << endl;
-      cout << "Per process grid:\t\t" << domain[0] << " x " << domain[1] <<
-        " x " << domain[2] << endl;
-      cout << "Chunk dimensions:\t\t" << chunk[0] << " x " << chunk[1] <<
-        " x " << chunk[2] << endl;
-      cout << "Number of time steps:\t\t" << simulation_time << endl;
-      cout << "Pre-create:\t\t\t" << precreate << endl;
-      cout << "Collective I/O:\t\t\t" << collective_write << endl;
-      cout << "Collective metadata requested:\t" << set_collective_metadata 
-          << endl;
-      cout << "Early allocation:\t\t" << early_allocation << endl;
-      cout << "H5D_FILL_TIME_NEVER set:\t" << never_fill << endl;
-      cout << endl;
-
-
-
-
-
 
   // create the fle dataspace, time dimension first!
   hsize_t n_dims = 4;
@@ -130,50 +179,4 @@ int main(int argc, char** argv)
   assert(mspace >= 0);
   assert(H5Sselect_all(mspace) >= 0);
 
-  // use the latest file format
-  assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
-         0);
-
-  // set collective metadata reads
-  if ((H5_VERS_MAJOR == 1) && (H5_VERS_MINOR >= 10) && set_collective_metadata)
-    {
-      assert(H5Pset_all_coll_metadata_ops(fapl, true) >=0 );
-      assert(H5Pset_all_coll_metadata_ops(dapl, true) >=0 );
-    }
-
-  // file handle and name for file which will be created
-  string fname = "seism-test.h5";
-  hid_t file, dset_chunked;
-
-
-
-  //////////////////////////////////////////////////////////////////////////////
-
-  assert(H5Dclose(dset_chunked) >= 0);
-  assert(H5Pclose(fapl) >= 0);
-  assert(H5Sclose(mspace) >= 0);
-  assert(H5Pclose(dxpl) >= 0);
-  assert(H5Sclose(fspace) >= 0);
-  assert(H5Pclose(dcpl) >= 0);
-  assert(H5Fclose(file) >= 0);
-
-
-  if (mpi_rank == 0)
-    {
-      // re-open the file and write the simulation attributes
-      // create the fapl
-      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >= 0);
-      file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl);
-      //file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
-      assert (file >= 0);
-      cout << "here" <<endl;
-      seismCoreAttributes attr((char*)"my_attr", processor, domain, chunk, simulation_time, collective_write, precreate, set_collective_metadata, early_allocation, never_fill);
-      cout << "here2" <<endl;
-      attr.writeAttributesToFile(file);
-    }
-
-  return 0;
-}
 */

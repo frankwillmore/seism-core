@@ -394,19 +394,12 @@ int main(int argc, char** argv)
   if (mpi_rank == 0)
     {
       // re-open the file and write the simulation attributes
-      // create the fapl
-      hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-      assert(fapl >= 0);
-      assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >= 0);
-      file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl);
-      //file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+      //assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >= 0);
+      file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
       assert (file >= 0);
-      cout << "here" <<endl;
       seismCoreAttributes attr((char*)"my_attr", processor, domain, chunk, simulation_time, collective_write, precreate, set_collective_metadata, early_allocation, never_fill);
-      cout << "here2" <<endl;
       attr.writeAttributesToFile(file);
-      cout << "here3" <<endl;
-      H5Fclose(file);
+      assert(H5Fclose(file) >=0);
     }
 
   MPI_Finalize();
