@@ -25,7 +25,7 @@
 // DONE
 // EOF
 //
-////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
 #include "hdf5.h"
 
@@ -41,7 +41,7 @@ using namespace std;
 
 #define CHUNKED_DSET_NAME "chunked"
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
   
 int main(int argc, char** argv)
 {
@@ -79,30 +79,70 @@ int main(int argc, char** argv)
 
     // file is open, we have the attributes, etc. now get the data
 
-    // loop over processor geom
-    for (unsigned int t=0; t<attr.simulation_time; t++) {
-        // create a buffer to hold one domain worth of junk
-        int ***buffer = (int ***)malloc(sizeof(int) * attr.domain_dims[0] * attr.domain_dims[1] * attr.domain_dims[2]); 
+    // open the dataset
+    hid_t dset = H5Dopen (file, CHUNKED_DSET_NAME, H5P_DEFAULT);
 
-        // open the dataset
-        dset = H5Dopen (file, CHUNKED_DSET_NAME, H5P_DEFAULT);
+    // create a buffer to hold one domain worth of data
+    hsize_t domain_size = attr.domain_dims[0] * attr.domain_dims[1] * attr.domain_dims[2];
+    unsigned int *buffer = (unsigned int *)malloc(sizeof(int) * domain_size);
 
-        // read the dataset into the buffer
-        assert( H5Dread (dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buffer) >= 0);
+    // and a dataspace the right size and shap
+cout << "dims:" << attr.processor_dims[0] << endl;
+    // loop over time and processor geom
+    for (unsigned int t=0; t<attr.simulation_time; t++) 
+        for (unsigned int i=0; i<attr.processor_dims[0]; i++)
+            for (unsigned int j=0; j<attr.processor_dims[1]; j++)
+                for (unsigned int k=0; k<attr.processor_dims[2]; k++)
+                {
+cout << t << ":" << i << ", " << j << ", " << k << endl;
+// check this formula
+                    unsigned int original_mpi_rank = i * attr.processor_dims[1] * attr.processor_dims[2] 
+                                          + j * attr.processor_dims[2] 
+                                          + k;
+cout << "rank #" << original_mpi_rank << endl;
+                    hid_t fspace = H5Dget_space(dset);
+                    hsize_t start[4] = {t, 
+                        i * attr.domain_dims[0], 
+                        j * attr.domain_dims[1],
+                        k * attr.domain_dims[2]};
+                    hsize_t stride[4] = {1,1,1,1};
+                    hsize_t count[4] = {1,1,1,1};
+                    hsize_t block[4] = {1,
+                        attr.domain_dims[0],
+                        attr.domain_dims[1],
+                        attr.domain_dims[2]};
 
-        unsigned int grand_sum=0;
-        for (unsigned int i=0; i<processor_dims[0]; i++)
-            for (unsigned int j=0; j<processor_dims[1]; j++)
-                for (unsigned int k=0; k<processor_dims[2]; k++)
-                    grand_sum += 0; // expression for buffer, something like [i*domain_dims[0]*domain_dims[1] + j*domain_dims[1] + k]; 
+                    assert( H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, stride, count, block ) >= 0 );
 
-        // compare the grand sum to what it should be.. i.e. number of elements * rank
-        int mpi_rank = i*processor_dims[1]*processor_dims[2] + j * processor_dims[1] + k *pro ... gaaah!
+                    hid_t mspace = H5Screate_simple(4, block, NULL);
+                    assert (mspace >= 0);
+                    assert (H5Sselect_all(mspace) >= 0);
+
+                    // read the dataset into the buffer
+                    assert( H5Dread (dset, H5T_NATIVE_UINT, mspace, fspace, 
+                            H5P_DEFAULT, buffer) >= 0);
+                    //unsigned int grand_sum=0;
+                    
+                    // loop over elements in buffer, calc sum
+                    for (unsigned int domain_i=0; domain_i<attr.domain_dims[0]; domain_i++)
+                    for (unsigned int domain_j=0; domain_j<attr.domain_dims[1]; domain_j++)
+                    for (unsigned int domain_k=0; domain_k<attr.domain_dims[2]; domain_k++)
+// check this formula
+//                        grand_sum += buffer[domain_i * attr.domain_dims[0] * attr.domain_dims[1] + domain_j * attr.domain_dims[1] + domain_k]; 
+                    // better yet, just check the value
+                    {
+                    assert(buffer[domain_i * attr.domain_dims[0] * attr.domain_dims[1] + domain_j * attr.domain_dims[1] + domain_k] == original_mpi_rank); 
+                    cout << buffer[domain_i * attr.domain_dims[0] * attr.domain_dims[1] + domain_j * attr.domain_dims[1] + domain_k] << "==" << original_mpi_rank << endl; 
+                    }
+
+                } // end loop over k, j, i, t
+
+        //???hsize_t array_index = original_mpi_rank * domain_size;
 
 
 
 
-
+    /*
     hid_t space = H5Dget_space (dset);
     start[0] = 0;
     start[1] = 1;
@@ -113,6 +153,7 @@ int main(int argc, char** argv)
     block[0] = 2;
     block[1] = 3;
     status = H5Sselect_hyperslab (space, H5S_SELECT_SET, start, stride, count, block);
+    */
 
         // select hyperslab
         // read the data
@@ -120,25 +161,11 @@ int main(int argc, char** argv)
         // loop and sum over domain dims 
 
 
-    }
-
-    /*
-    unsigned int processor_dims[3];
-    unsigned int chunk_dims[3];
-    unsigned int domain_dims[3];
-    unsigned int simulation_time;
-    int collective_write;
-    int precreate;
-    int set_collective_metadata;
-    int early_allocation;
-    int never_fill;
-    */
 
     H5Fclose(file);
 }
 
 /*
-
   // create the fle dataspace, time dimension first!
   hsize_t n_dims = 4;
   hsize_t dims[H5S_MAX_RANK];
