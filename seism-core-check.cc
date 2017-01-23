@@ -78,8 +78,8 @@ int main(int argc, char** argv)
     // create a buffer to hold one domain worth of data
     hsize_t domain_size = 
         attr.domain_dims[0] * attr.domain_dims[1] * attr.domain_dims[2];
-    unsigned int *buffer = 
-        (unsigned int *)malloc(sizeof(unsigned int) * domain_size);
+    float *buffer = 
+        (float *)malloc(sizeof(float) * domain_size);
 
     unsigned long found_correct = 0;
     unsigned long found_incorrect = 0;
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
                     processor_k++
                 )
                 {
-                    unsigned int original_mpi_rank = 
+                    float original_mpi_rank = 
                         processor_i * attr.processor_dims[1] 
                         * attr.processor_dims[2] 
                         + processor_j * attr.processor_dims[2] 
@@ -137,7 +137,7 @@ int main(int argc, char** argv)
                     assert (H5Sselect_all(mspace) >= 0);
 
                     // read the dataset into the buffer
-                    assert( H5Dread (dset, H5T_NATIVE_UINT, mspace, fspace, 
+                    assert( H5Dread (dset, H5T_NATIVE_FLOAT, mspace, fspace, 
                             H5P_DEFAULT, buffer) >= 0);
                     
                     unsigned long local_errors = 0;
