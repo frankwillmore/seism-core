@@ -12,13 +12,9 @@ seism-core: seism-core.o
 seism-core-slice: seism-core-slice.o seism-core-attributes.o
 	$(CXX) $(CXXFLAGS) seism-core-attributes.o seism-core-slice.o -o $@ -lstdc++
 
-check-slice: seism-core-slice
+check-slice: seism-core-slice seism-core-check
 	mpiexec -n 8 ./seism-core-slice < tests/jelly/check.in
-#	mpiexec -n 8 ./seism-core-slice < tests/jelly/precreate0.in
-#	mpiexec -n 8 ./seism-core-slice < tests/jelly/check-8-pre
-#	mpiexec -n 16 ./seism-core-slice < tests/jelly/check-16-pre
-#	mpiexec -n 32 ./seism-core-slice < tests/jelly/check-32-pre
-#	mpiexec -n 64 ./seism-core-slice < tests/jelly/check-64-pre
+	./seism-core-check seism-test.h5
 
 seism-core.o: seism-core.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
