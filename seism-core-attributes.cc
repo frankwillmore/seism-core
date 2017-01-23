@@ -8,18 +8,13 @@ using namespace std;
 
 void seismCoreAttributes::init()
 {
-    cout << "calling init()" << endl;
-
     // create the inner array and character types
     vls_type_c_id = H5Tcopy(H5T_C_S1);
     H5Tset_size(vls_type_c_id, H5T_VARIABLE);
     hsize_t adims[] = {3};
     dim_h5t = H5Tarray_create(H5T_NATIVE_UINT, 1, adims);
     
-    cout << "attributes_h5t not yet created = " << attributes_h5t << endl; 
-
     attributes_h5t = H5Tcreate(H5T_COMPOUND, sizeof(seismCoreAttributes)); 
-    cout << "attributes_h5t created = " << attributes_h5t << endl; 
     H5Tinsert(attributes_h5t, "name", HOFFSET(seismCoreAttributes, name), vls_type_c_id);
     H5Tinsert(attributes_h5t, "processor_dims", HOFFSET(seismCoreAttributes, processor_dims), dim_h5t);
     H5Tinsert(attributes_h5t, "chunk_dims", HOFFSET(seismCoreAttributes, chunk_dims), dim_h5t);
@@ -32,16 +27,15 @@ void seismCoreAttributes::init()
     H5Tinsert(attributes_h5t, "never_fill", HOFFSET(seismCoreAttributes, never_fill), H5T_NATIVE_INT);
 
     // data types that are in the class... 
-//    H5Tinsert(attributes_h5t, "vls_type_c_id", HOFFSET(seismCoreAttributes, vls_type_c_id), H5T_NATIVE_INT);
-//    H5Tinsert(attributes_h5t, "dim_h5t", HOFFSET(seismCoreAttributes, dim_h5t), H5T_NATIVE_INT);
-//    H5Tinsert(attributes_h5t, "attributes_h5t", HOFFSET(seismCoreAttributes, attributes_h5t), H5T_NATIVE_INT);
+    // H5Tinsert(attributes_h5t, "vls_type_c_id", HOFFSET(seismCoreAttributes, vls_type_c_id), H5T_NATIVE_INT);
+    // H5Tinsert(attributes_h5t, "dim_h5t", HOFFSET(seismCoreAttributes, dim_h5t), H5T_NATIVE_INT);
+    // H5Tinsert(attributes_h5t, "attributes_h5t", HOFFSET(seismCoreAttributes, attributes_h5t), H5T_NATIVE_INT);
 }
 
 // the object has been created and initialized before calling this 
 void seismCoreAttributes::writeAttributesToFile(hid_t file_id)
 {
     // commit the compound type to HDF5 file
-    cout << "???" << attributes_h5t << endl;
     assert(H5Tcommit(file_id, "seismCoreAttributes", attributes_h5t, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) >= 0 );
     
     // create scalar dataspace for attributes        
@@ -98,13 +92,7 @@ seismCoreAttributes::seismCoreAttributes
 // constructor for loading seismCoreAttributes from file
 seismCoreAttributes::seismCoreAttributes(hid_t file_id)
 {
-    cout << "constructing from file" << endl;
-
-    cout << "before init()" <<endl;
-    cout << "attributes_h5t=" << attributes_h5t << endl;
     init();
-    cout << "after init()" <<endl;
-    cout << "attributes_h5t=" << attributes_h5t << endl;
 
     // stash the values of attributes_h5t, vls_type_c_id, and dim_h5t
     // before overwriting with values from file
@@ -129,9 +117,7 @@ seismCoreAttributes::seismCoreAttributes(hid_t file_id)
 
 seismCoreAttributes::~seismCoreAttributes()
 {
-    cout << "destructing... " << endl;
     // close resources 
-    cout << "attributes_h5t=" << attributes_h5t << endl;
     H5Tclose(attributes_h5t);
     H5Tclose(vls_type_c_id); 
     H5Tclose(dim_h5t); 

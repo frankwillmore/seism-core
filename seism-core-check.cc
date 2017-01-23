@@ -15,7 +15,7 @@
 // mpiexec -n 8 ./seism-core << EOF
 // processor 2 2 2
 // chunk 180 64 64
-// domain 180 64 64
+// domain 360 64 64
 // time 2
 // collective_write
 // precreate
@@ -25,7 +25,7 @@
 // DONE
 // EOF
 //
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 #include "hdf5.h"
 
@@ -45,7 +45,6 @@ using namespace std;
   
 int main(int argc, char** argv)
 {
-
     if (argc < 2) 
       {
         cout << "No filename specified\n" ;
@@ -56,53 +55,66 @@ int main(int argc, char** argv)
     // open file and read the attributes
     hid_t file = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
     assert(file >= 0);
-    cout << "creating attributes in main:" << endl;
     seismCoreAttributes attr(file);
 
-    //cout << "attr.name: " << attr.name << endl;
-    cout << "in main after declaration, attr.attributes_h5t: " << attr.attributes_h5t << endl;
-
-    cout << attr.name << endl;
-    cout << "processor: ";
+    cout << endl;
+    cout << "processor dims: ";
     cout << attr.processor_dims[0] << ":";
     cout << attr.processor_dims[1] << ":";
     cout << attr.processor_dims[2] << endl;
-    cout << "chunk: ";
+    cout << "chunk dims: ";
     cout << attr.chunk_dims[0] << ":";
     cout << attr.chunk_dims[1] << ":";
     cout << attr.chunk_dims[2] << endl;
-    cout << "domain: ";
+    cout << "domain dims: ";
     cout << attr.domain_dims[0] << ":";
     cout << attr.domain_dims[1] << ":";
     cout << attr.domain_dims[2] << endl;
-    cout << "etc: "<< endl;
-    cout << attr.simulation_time << endl;
-    cout << attr.collective_write << endl;
-    cout << attr.precreate << endl;
-
-
-    // file is open, we have the attributes, etc. now get the data
+    cout << endl;
 
     // open the dataset
     hid_t dset = H5Dopen (file, CHUNKED_DSET_NAME, H5P_DEFAULT);
 
     // create a buffer to hold one domain worth of data
-    hsize_t domain_size = attr.domain_dims[0] * attr.domain_dims[1] * attr.domain_dims[2];
-    unsigned int *buffer = (unsigned int *)malloc(sizeof(unsigned int) * domain_size);
+    hsize_t domain_size = 
+        attr.domain_dims[0] * attr.domain_dims[1] * attr.domain_dims[2];
+    unsigned int *buffer = 
+        (unsigned int *)malloc(sizeof(unsigned int) * domain_size);
 
-    // and a dataspace the right size and shape
-cout << "dims:" << attr.processor_dims[0] << endl;
+    unsigned long found_correct = 0;
+    unsigned long found_incorrect = 0;
+
     // loop over time and processor geom
     for (unsigned int t=0; t<attr.simulation_time; t++) 
-        for (unsigned int processor_i=0; processor_i<attr.processor_dims[0]; processor_i++)
-            for (unsigned int processor_j=0; processor_j<attr.processor_dims[1]; processor_j++)
-                for (unsigned int processor_k=0; processor_k<attr.processor_dims[2]; processor_k++)
+    for (
+            unsigned int processor_i=0; 
+            processor_i<attr.processor_dims[0]; 
+            processor_i++
+        )
+            for 
+            (
+                unsigned int processor_j=0; 
+                processor_j<attr.processor_dims[1]; 
+                processor_j++
+            )
+                for 
+                (
+                    unsigned int processor_k=0;
+                    processor_k<attr.processor_dims[2];
+                    processor_k++
+                )
                 {
-cout << "time #" << t << " / processor #( " << processor_i << ", " << processor_j << ", " << processor_k << " )" << endl;
-                    unsigned int original_mpi_rank = processor_i * attr.processor_dims[1] * attr.processor_dims[2] 
-                                          + processor_j * attr.processor_dims[2] 
-                                          + processor_k;
-cout << "rank #" << original_mpi_rank << endl;
+                    unsigned int original_mpi_rank = 
+                        processor_i * attr.processor_dims[1] 
+                        * attr.processor_dims[2] 
+                        + processor_j * attr.processor_dims[2] 
+                        + processor_k;
+                    cout << "checking time step #" << t << " / processor @ ( " 
+                         << processor_i << ", " << processor_j << ", " 
+                         << processor_k << " )" << " with original rank #" 
+                         << original_mpi_rank << endl;
+
+                    // get the dataspace
                     hid_t fspace = H5Dget_space(dset);
                     hsize_t start[4] = {t, 
                         processor_i * attr.domain_dims[0], 
@@ -115,7 +127,10 @@ cout << "rank #" << original_mpi_rank << endl;
                         attr.domain_dims[1],
                         attr.domain_dims[2]};
 
-                    assert( H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, stride, count, block ) >= 0 );
+                    // select hyperslab within file dataspace
+                    assert ( H5Sselect_hyperslab(
+                        fspace, H5S_SELECT_SET, start, stride, count, block ) 
+                        >= 0 );
 
                     hid_t mspace = H5Screate_simple(4, block, NULL);
                     assert (mspace >= 0);
@@ -124,22 +139,55 @@ cout << "rank #" << original_mpi_rank << endl;
                     // read the dataset into the buffer
                     assert( H5Dread (dset, H5T_NATIVE_UINT, mspace, fspace, 
                             H5P_DEFAULT, buffer) >= 0);
-                    //unsigned int grand_sum=0;
                     
+                    unsigned long local_errors = 0;
                     // loop over elements in buffer, check value
-                    for (unsigned int domain_i=0; domain_i<attr.domain_dims[0]; domain_i++)
-                    for (unsigned int domain_j=0; domain_j<attr.domain_dims[1]; domain_j++)
-                    for (unsigned int domain_k=0; domain_k<attr.domain_dims[2]; domain_k++)
-                    {
+                    for 
+                    (
+                        unsigned int domain_i=0;
+                        domain_i<attr.domain_dims[0]; 
+                        domain_i++
+                    )
+                        for 
+                        (
+                            unsigned int domain_j=0; 
+                            domain_j<attr.domain_dims[1]; 
+                            domain_j++
+                        )
+                            for 
+                            (
+                                unsigned int domain_k=0; 
+                                domain_k<attr.domain_dims[2]; 
+                                domain_k++
+                            )
+                            {
+                                unsigned int buffer_element = 
+                                    domain_i * attr.domain_dims[1] 
+                                    * attr.domain_dims[2] 
+                                    + domain_j * attr.domain_dims[2] 
+                                    + domain_k ;
+                                if (buffer[buffer_element] 
+                                        == original_mpi_rank) found_correct++;
+                                else local_errors++;
+                            }
+                            if (local_errors)
+                            {
+                                cout << "Found " << local_errors << " errors."
+                                     << endl;
+                                found_incorrect += local_errors;
+                            }
 
-cout << domain_i << ", " <<domain_j << ", " <<domain_k <<endl;
+                    H5Sclose(fspace);
+                    H5Sclose(mspace);
 
-unsigned int buffer_element = domain_i * attr.domain_dims[1] * attr.domain_dims[2] + domain_j * attr.domain_dims[2] + domain_k ;
-
-cout << "buffer[" << buffer_element <<"] == " << buffer[buffer_element] << " (?=" << original_mpi_rank << ")" << endl; 
-                    }
                 } // end loop over k, j, i, t
 
+    cout << endl;
+    cout << "Checking complete. Found totals of: " << found_correct 
+         << " correct / " << found_incorrect << " incorrect." << endl;
+    cout << endl;
+
+    H5Dclose(dset);
     H5Fclose(file);
 }
 
