@@ -15,6 +15,7 @@ seism-core-slice: seism-core-slice.o seism-core-attributes.o
 check-slice: seism-core-slice seism-core-check
 	mpiexec -n 8 ./seism-core-slice < tests/jelly/check.in
 	./seism-core-check seism-test.h5
+	rm seism-test.h5
 
 seism-core.o: seism-core.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
