@@ -397,7 +397,7 @@ int main(int argc, char** argv)
       //assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >= 0);
       file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
       assert (file >= 0);
-      seismCoreAttributes attr((char*)"my_attr", processor, domain, chunk, simulation_time, collective_write, precreate, set_collective_metadata, early_allocation, never_fill);
+      seismCoreAttributes attr((char*)"my_attr", processor, chunk, domain, simulation_time, collective_write, precreate, set_collective_metadata, early_allocation, never_fill);
       attr.writeAttributesToFile(file);
       assert(H5Fclose(file) >=0);
     }
