@@ -23,7 +23,6 @@ void seismCoreAttributes::init()
     H5Tinsert(attributes_h5t, "collective_write", HOFFSET(seismCoreAttributes, collective_write), H5T_NATIVE_INT);
     H5Tinsert(attributes_h5t, "precreate", HOFFSET(seismCoreAttributes, precreate), H5T_NATIVE_INT);
     H5Tinsert(attributes_h5t, "set_collective_metadata", HOFFSET(seismCoreAttributes, set_collective_metadata), H5T_NATIVE_INT);
-    H5Tinsert(attributes_h5t, "early_allocation", HOFFSET(seismCoreAttributes, early_allocation), H5T_NATIVE_INT);
     H5Tinsert(attributes_h5t, "never_fill", HOFFSET(seismCoreAttributes, never_fill), H5T_NATIVE_INT);
 
     // data types that are in the class... 
@@ -65,7 +64,6 @@ seismCoreAttributes::seismCoreAttributes
     int _collective_write,
     int _precreate,
     int _set_collective_metadata,
-    int _early_allocation,
     int _never_fill
 )   
 {
@@ -83,7 +81,6 @@ seismCoreAttributes::seismCoreAttributes
     collective_write = _collective_write;
     precreate = _precreate;
     set_collective_metadata = _set_collective_metadata;
-    early_allocation = _early_allocation;
     never_fill = _never_fill;
 
     init();

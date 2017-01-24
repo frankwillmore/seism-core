@@ -20,7 +20,6 @@
 // collective_write
 // precreate
 // set_collective_metadata
-// early_allocation
 // never_fill
 // DONE
 // EOF

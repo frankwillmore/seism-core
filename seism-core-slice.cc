@@ -20,7 +20,6 @@
 // collective_write
 // precreate
 // set_collective_metadata
-// early_allocation
 // never_fill
 // DONE
 // EOF
@@ -99,7 +98,6 @@ int main(int argc, char** argv)
   int collective_write = 0;
   int precreate = 0;
   int set_collective_metadata = 0;
-  int early_allocation = 0;
   int never_fill = 0;
 
   if (mpi_rank==0)
@@ -123,8 +121,6 @@ int main(int argc, char** argv)
           precreate = true;
         if (!parameter.compare("set_collective_metadata"))
           set_collective_metadata = true;
-        if (!parameter.compare("early_allocation"))
-          early_allocation = true;
         if (!parameter.compare("never_fill"))
           never_fill = true;
         getline(cin, rest_of_line); // read the rest of the line
@@ -142,8 +138,6 @@ int main(int argc, char** argv)
   assert(MPI_Bcast(&precreate, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
          MPI_SUCCESS);
   assert(MPI_Bcast(&set_collective_metadata, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
-         MPI_SUCCESS);
-  assert(MPI_Bcast(&early_allocation, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
          MPI_SUCCESS);
   assert(MPI_Bcast(&never_fill, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
          MPI_SUCCESS);
@@ -170,7 +164,6 @@ int main(int argc, char** argv)
       cout << "Collective I/O:\t\t\t" << collective_write << endl;
       cout << "Collective metadata requested:\t" << set_collective_metadata 
           << endl;
-      cout << "Early allocation:\t\t" << early_allocation << endl;
       cout << "H5D_FILL_TIME_NEVER set:\t" << never_fill << endl;
       cout << endl;
     }
@@ -201,8 +194,7 @@ int main(int argc, char** argv)
   assert(dcpl >= 0);
   assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
   if (never_fill) assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
-  if (early_allocation) 
-      assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
+  assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
 
   hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
   assert(dapl >= 0);
@@ -396,7 +388,7 @@ int main(int argc, char** argv)
       //assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >= 0);
       file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
       assert (file >= 0);
-      seismCoreAttributes attr((char*)"my_attr", processor, chunk, domain, simulation_time, collective_write, precreate, set_collective_metadata, early_allocation, never_fill);
+      seismCoreAttributes attr((char*)"my_attr", processor, chunk, domain, simulation_time, collective_write, precreate, set_collective_metadata, never_fill);
       attr.writeAttributesToFile(file);
       assert(H5Fclose(file) >=0);
     }

@@ -11,7 +11,6 @@ typedef struct {
     int collective_write;
     int precreate;
     int set_collective_metadata;
-    int early_allocation;
     int never_fill;
 } seism_core_attributes_t;
 */
@@ -29,7 +28,6 @@ class seismCoreAttributes
         int collective_write;
         int precreate;
         int set_collective_metadata;
-        int early_allocation;
         int never_fill;
 
         // constructor to create a new attributes object from simulation
@@ -43,7 +41,6 @@ class seismCoreAttributes
             int _collective_write,
             int _precreate,
             int _set_collective_metadata,
-            int _early_allocation,
             int _never_fill
         );
 

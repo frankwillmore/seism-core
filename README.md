@@ -1,5 +1,7 @@
 # SEISM-CORE I/O KERNEL FOR MEASURING THROUGHPUT 
 
+===
+
 ## ABOUT
 
 SEISM-CORE is a minimal kernel used for measuring the write output that might be experienced by a typical parallel application generating checkpoints in an HDF5 file. A list of tunable parameters and code snippets showing their implementation is shown in INPUTS section.
@@ -66,9 +68,9 @@ To check whether metadata reads were in fact performed collectively:
     hbool_t actual_metadata_ops_collective;
     H5Pget_all_coll_metadata_ops( dapl, &actual_metadata_ops_collective );
 
-### early_allocation
+### early_allocation **__deprecated__** 
 
-**deprecated** When pre-creating a chunked dataset in process 0 for parallel I/O it MUST be set in the creation property list, because late allocation is the default for sequential HDF5. (… and parallel write to a chunked dataset with late allocation is undefined!) In code:
+When pre-creating a chunked dataset in process 0 for parallel I/O it MUST be set in the creation property list, because late allocation is the default for sequential HDF5. (… and parallel write to a chunked dataset with late allocation is undefined!) In code:
 
     assert(H5Pset_alloc_time(dcpl,H5D_ALLOC_TIME_EARLY) >= 0);
 
