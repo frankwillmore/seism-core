@@ -15,27 +15,40 @@ void seismCoreAttributes::init()
     dim_h5t = H5Tarray_create(H5T_NATIVE_UINT, 1, adims);
     
     attributes_h5t = H5Tcreate(H5T_COMPOUND, sizeof(seismCoreAttributes)); 
-    H5Tinsert(attributes_h5t, "name", HOFFSET(seismCoreAttributes, name), vls_type_c_id);
-    H5Tinsert(attributes_h5t, "processor_dims", HOFFSET(seismCoreAttributes, processor_dims), dim_h5t);
-    H5Tinsert(attributes_h5t, "chunk_dims", HOFFSET(seismCoreAttributes, chunk_dims), dim_h5t);
-    H5Tinsert(attributes_h5t, "domain_dims", HOFFSET(seismCoreAttributes, domain_dims), dim_h5t);
-    H5Tinsert(attributes_h5t, "simulation_time", HOFFSET(seismCoreAttributes, simulation_time), H5T_NATIVE_UINT);
-    H5Tinsert(attributes_h5t, "collective_write", HOFFSET(seismCoreAttributes, collective_write), H5T_NATIVE_INT);
-    H5Tinsert(attributes_h5t, "precreate", HOFFSET(seismCoreAttributes, precreate), H5T_NATIVE_INT);
-    H5Tinsert(attributes_h5t, "set_collective_metadata", HOFFSET(seismCoreAttributes, set_collective_metadata), H5T_NATIVE_INT);
-    H5Tinsert(attributes_h5t, "never_fill", HOFFSET(seismCoreAttributes, never_fill), H5T_NATIVE_INT);
+    H5Tinsert(attributes_h5t, "name", HOFFSET(seismCoreAttributes, name), 
+              vls_type_c_id);
+    H5Tinsert(attributes_h5t, "processor_dims", HOFFSET(seismCoreAttributes,
+              processor_dims), dim_h5t);
+    H5Tinsert(attributes_h5t, "chunk_dims", HOFFSET(seismCoreAttributes, 
+              chunk_dims), dim_h5t);
+    H5Tinsert(attributes_h5t, "domain_dims", HOFFSET(seismCoreAttributes, 
+              domain_dims), dim_h5t);
+    H5Tinsert(attributes_h5t, "simulation_time", HOFFSET(seismCoreAttributes, 
+              simulation_time), H5T_NATIVE_UINT);
+    H5Tinsert(attributes_h5t, "collective_write", HOFFSET(seismCoreAttributes,
+              collective_write), H5T_NATIVE_INT);
+    H5Tinsert(attributes_h5t, "precreate", HOFFSET(seismCoreAttributes, 
+              precreate), H5T_NATIVE_INT);
+    H5Tinsert(attributes_h5t, "set_collective_metadata", HOFFSET(
+              seismCoreAttributes, set_collective_metadata), H5T_NATIVE_INT);
+    H5Tinsert(attributes_h5t, "never_fill", HOFFSET(seismCoreAttributes, 
+              never_fill), H5T_NATIVE_INT);
 
     // data types that are in the class... 
-    // H5Tinsert(attributes_h5t, "vls_type_c_id", HOFFSET(seismCoreAttributes, vls_type_c_id), H5T_NATIVE_INT);
-    // H5Tinsert(attributes_h5t, "dim_h5t", HOFFSET(seismCoreAttributes, dim_h5t), H5T_NATIVE_INT);
-    // H5Tinsert(attributes_h5t, "attributes_h5t", HOFFSET(seismCoreAttributes, attributes_h5t), H5T_NATIVE_INT);
+    // H5Tinsert(attributes_h5t, "vls_type_c_id", 
+    //     HOFFSET(seismCoreAttributes, vls_type_c_id), H5T_NATIVE_INT);
+    // H5Tinsert(attributes_h5t, "dim_h5t", 
+    //     HOFFSET(seismCoreAttributes, dim_h5t), H5T_NATIVE_INT);
+    // H5Tinsert(attributes_h5t, "attributes_h5t", 
+    //     HOFFSET(seismCoreAttributes, attributes_h5t), H5T_NATIVE_INT);
 }
 
 // the object has been created and initialized before calling this 
 void seismCoreAttributes::writeAttributesToFile(hid_t file_id)
 {
     // commit the compound type to HDF5 file
-    assert(H5Tcommit(file_id, "seismCoreAttributes", attributes_h5t, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) >= 0 );
+    assert(H5Tcommit(file_id, "seismCoreAttributes", attributes_h5t, 
+                H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) >= 0 );
     
     // create scalar dataspace for attributes        
     hid_t space_id = H5Screate(H5S_SCALAR);
@@ -43,7 +56,8 @@ void seismCoreAttributes::writeAttributesToFile(hid_t file_id)
     hid_t aapl_id = H5P_DEFAULT;
 
     // create the attribute
-    hid_t attr_id = H5Acreate( file_id, "simulation_attributes", attributes_h5t, space_id, acpl_id, aapl_id );
+    hid_t attr_id = H5Acreate( file_id, "simulation_attributes", 
+            attributes_h5t, space_id, acpl_id, aapl_id );
 
     // write attribute
     assert(H5Awrite(attr_id, attributes_h5t, this) >= 0); 
@@ -100,7 +114,8 @@ seismCoreAttributes::seismCoreAttributes(hid_t file_id)
     // open the attribute, and read info into a buffer
     hid_t aapl_id = H5P_DEFAULT;
     hid_t lapl_id = H5P_DEFAULT;
-    hid_t attr_id = H5Aopen_by_name( file_id, "/", "simulation_attributes", aapl_id, lapl_id );
+    hid_t attr_id = H5Aopen_by_name( file_id, "/", "simulation_attributes", 
+            aapl_id, lapl_id );
     assert(attr_id >= 0);
     assert( H5Aread(attr_id, attributes_h5t, this ) >= 0);
 

@@ -1,20 +1,6 @@
 // seism-core-attributes.hh
 #include "hdf5.h"
 
-/*
-typedef struct {
-    char *name;
-    unsigned int processor_dims[3];
-    unsigned int chunk_dims[3];
-    unsigned int domain_dims[3];
-    unsigned int simulation_time;
-    int collective_write;
-    int precreate;
-    int set_collective_metadata;
-    int never_fill;
-} seism_core_attributes_t;
-*/
-
 class seismCoreAttributes 
 {
 
@@ -53,13 +39,11 @@ class seismCoreAttributes
         // destructor will free H5 resources
         ~seismCoreAttributes();
 
-//    private:
-
         hid_t vls_type_c_id; // compound type
         hid_t dim_h5t; // dimension type
         hid_t attributes_h5t; // attributes type
-//        hid_t space_id; // dataspace
-//        hid_t attr_id; // atribute
+
+    private:
 
         void init(); // create H5 objects used internally
 
