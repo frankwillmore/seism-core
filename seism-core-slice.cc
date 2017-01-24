@@ -390,7 +390,6 @@ int main(int argc, char** argv)
 
     }
 
-
   if (mpi_rank == 0)
     {
       // re-open the file and write the simulation attributes

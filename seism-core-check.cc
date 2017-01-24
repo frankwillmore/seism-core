@@ -34,6 +34,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <cstdlib>
 
 #include "seism-core-attributes.hh"
 
@@ -48,7 +49,7 @@ int main(int argc, char** argv)
     if (argc < 2) 
       {
         cout << "No filename specified\n" ;
-        exit(1);
+        return(1);
       }
     char *filename = argv[1];
 
