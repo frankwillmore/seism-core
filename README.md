@@ -68,12 +68,6 @@ To check whether metadata reads were in fact performed collectively:
     hbool_t actual_metadata_ops_collective;
     H5Pget_all_coll_metadata_ops( dapl, &actual_metadata_ops_collective );
 
-### early_allocation **__deprecated__** 
-
-When pre-creating a chunked dataset in process 0 for parallel I/O it MUST be set in the creation property list, because late allocation is the default for sequential HDF5. (… and parallel write to a chunked dataset with late allocation is undefined!) In code:
-
-    assert(H5Pset_alloc_time(dcpl,H5D_ALLOC_TIME_EARLY) >= 0);
-
 ### never_fill
 
 Specify this to keep HDF5 from explicitly writing a fill value. The filesystem will typically have its own mechanism of ensuring you are not receiving 'reclaimed data' from the last user of the disk space. The kernel operates on the assumption that a program will be writing unique data from each process, and ignores whatever is there initially. See the reference manual if you would like to set a fill value explicitly. 
