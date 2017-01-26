@@ -11,13 +11,15 @@ For example, specifying:
 
 runs h5perf on 3 processors, using:
 
- -B 2 --> block size of 2
- -e 8 --> 8 bytes per process per dataset
- -p 3 --> minimum number of processes
- -P 3 --> maximum number of processes
- -x 4 --> minimum transfer size (bytes)
- -X 4 --> maximum transfer size (bytes)
+ -B 2 --> block size of 2 <br>
+ -e 8 --> 8 bytes per process per dataset <br>
+ -p 3 --> minimum number of processes <br>
+ -P 3 --> maximum number of processes <br>
+ -x 4 --> minimum transfer size (bytes) <br>
+ -X 4 --> maximum transfer size (bytes) <br>
 
 [drawing](figure_2.png )
+
+[drawing](figure_3.png )
 
 See the User Guide (pdf)<link> for a more complete list of parameters, examples and figures of the access patterns which are generated.
