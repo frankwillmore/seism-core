@@ -45,7 +45,8 @@ Number of time steps to be simulated.
 
 ### precreate
 
-Specifying *precreate* will cause the dataset to be created serially on process 0. The file is opened, the dataset is created, and the file is closed on process 0 only. The file is then re-opened by all processes for writing.
+Specifying *precreate* will cause the file and dataset to be created serially, and all chunks to be allocated on process 0. The file is opened, dataset created, resources allocated, and the file is closed on *process 0* only. The file is then re-opened by all processes for writing.
+        assert(H5Pset_all_coll_metadata_ops(dapl, true) >=0 ); 
 
 ### collective_write
 
@@ -63,8 +64,10 @@ Specifying *set_collective_metadata* will cause HDF5 to attempt to perform metad
     // Implementation in C
     if ((H5_VERS_MAJOR == 1) && (H5_VERS_MINOR >= 10) && set_collective_metadata)
     {
-        assert(H5Pset_all_coll_metadata_ops(fapl, true) >=0 );
-        assert(H5Pset_all_coll_metadata_ops(dapl, true) >=0 );
+        // set collective metadata for file, will be inherited by any objects opened using this handle.
+        assert(H5Pset_all_coll_metadata_ops(fapl, true) >=0 ); 
+        // set collective metadata for dataset only.
+        assert(H5Pset_all_coll_metadata_ops(dapl, true) >=0 ); 
     }
 
 To verify whether metadata reads were in fact performed collectively:
@@ -98,7 +101,6 @@ Then enter the seism-core commands:
     precreate
     collective_write
     set_collective_metadata
-    early_allocation
     never_fill
     DONE
 
