@@ -9,7 +9,6 @@ CXX_INCLUDES=/usr/include/c++/4.3/
 IFLAGS:=-I/u/sciteam/willmore/local/phdf5-1.10.0-install/include -I${CXX_INCLUDES}
 LFLAGS:=-L/u/sciteam/willmore/local/phdf5-1.10.0-install/lib -lhdf5
 
-
 default:
 	@printf "\033[31;01m' *** See instructions in Makefile, for prerequisites on building with 1.10.0 with two versions ***\033[0m\n"
 
@@ -18,9 +17,9 @@ seism-core-slice:
 	make seism-core-slice-bw
 
 # Make using my installed 1.10.0_patch1 version
-seism-core-slice-patch: seism-core-slice.cc
-	@printf "\033[31;01m\n\n*** Make sure to source ~/local/build_hdf5/NCSA_Blue_Waters/env_hdf5-1.10.0.sh to get the right environment when running ***\n\n\033[0m"
-	CC -I/u/sciteam/willmore/local/phdf5-1.10.0-install/include -DCRAYCC -dynamic -O2 -lstdc++ -L/u/sciteam/willmore/local/phdf5-1.10.0-install/lib -lhdf5 -L/opt/cray/mpt/7.2.4/gni/mpich2-CRAY64/8.3/lib -lmpichcxx_cray_default64 seism-core-slice.cc -o seism-core-slice-patch
+# seism-core-slice-patch: seism-core-slice.cc
+#	@printf "\033[31;01m\n\n*** Make sure to source ~/local/build_hdf5/NCSA_Blue_Waters/env_hdf5-1.10.0.sh to get the right environment when running ***\n\n\033[0m"
+#	CC -I/u/sciteam/willmore/local/phdf5-1.10.0-install/include -DCRAYCC -dynamic -O2 -lstdc++ -L/u/sciteam/willmore/local/phdf5-1.10.0-install/lib -lhdf5 -L/opt/cray/mpt/7.2.4/gni/mpich2-CRAY64/8.3/lib -lmpichcxx_cray_default64 seism-core-slice.cc -o seism-core-slice-patch
 
 # Build using the system-installed 1.10.0 module... note that Darshan should be disabled as it causes an error of as-yet-unkown origin
 # module load cray-hdf5-parallel/1.10.0
@@ -48,18 +47,9 @@ check-slice: seism-core-slice seism-core-check
 	rm seism-test.h5
 	@printf "\033[31;01m *** done ***\033[0m\n\n"
 
-check-scale: seism-core-slice
-	aprun -N8 -n 8 ./seism-core-slice < tests/bw/check-8-pre
-	aprun -N16 -n 16 ./seism-core-slice < tests/bw/check-16-pre
-	aprun -N32 -n 32 ./seism-core-slice < tests/bw/check-32-pre
-	aprun -N32 -n 64 ./seism-core-slice < tests/bw/check-64-pre
-	aprun -N32 -n 128 ./seism-core-slice < tests/bw/check-128-pre
-	aprun -N32 -n 256 ./seism-core-slice < tests/bw/check-256-pre
-
 clean:
 	rm -f *.o *.h5
 
 veryclean: clean
 	rm -f seism-core-slice-* seism-core-slice seism-core-check
-
 
