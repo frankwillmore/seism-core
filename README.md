@@ -8,6 +8,9 @@
 SEISM-CORE is a minimal kernel used for measuring the write throughput experienced by a typical parallel application writing checkpoints to an HDF5 file. A list of tuning parameters and code snippets showing their implementation is shown in PROGRAM INPUTS section.
 
 <img src="timesteps.svg" width="400" height="300" />
+![alt text](timesteps.svg "Timesteps figure")
+<img src="timesteps.svg" width="400" height="300" />
+
 
 Consecutive three-dimensional slices of a four-dimensional dataset are written for an increasing timestep index. The slices represent simulation data, being checkpointed after each simulation timestep. 
 
