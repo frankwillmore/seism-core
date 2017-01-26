@@ -9,6 +9,10 @@ SEISM-CORE is a minimal kernel used for measuring the write throughput experienc
 
 ![drawing](timesteps.svg )
 
+---
+
+![drawing](timesteps.png )
+
 Consecutive three-dimensional slices of a four-dimensional dataset are written for an increasing timestep index. The slices represent simulation data, being checkpointed after each simulation timestep. 
 
 ---
