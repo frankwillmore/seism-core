@@ -9,6 +9,12 @@ SEISM-CORE is a minimal kernel used for measuring the write throughput experienc
 
 ![alt text](timesteps.svg "Timesteps figure" width="400" height="300" )
 
+---
+
+<img src="timesteps.svg" alt="Drawing" style="width: 600px;"/>
+
+---
+
 <img src="timesteps.svg" width="600" height="450" />
 
 
