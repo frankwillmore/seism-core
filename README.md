@@ -5,7 +5,11 @@
 
 ## ABOUT
 
-SEISM-CORE is a minimal kernel used for measuring the write throughput experienced by a typical parallel application writing checkpoints to an HDF5 file. A list of tuning parameters and code snippets showing their implementation is shown in INPUTS section.
+SEISM-CORE is a minimal kernel used for measuring the write throughput experienced by a typical parallel application writing checkpoints to an HDF5 file. A list of tuning parameters and code snippets showing their implementation is shown in PROGRAM INPUTS section.
+
+![drawing](timesteps.png )
+
+Consecutive three-dimensional slices of a four-dimensional dataset are written for an increasing timestep index. The slices represent simulation data, being checkpointed after each simulation timestep. 
 
 ---
 
@@ -24,7 +28,30 @@ will cause the kernel program and its corresponding test program to be built, ru
 
 ---
 
-##  INPUTS
+## RUNNING AN EXAMPLE
+
+Example inputs can either be entered interactively, fed as standard input, or as a heredoc in a script. Each input is read as a single line, in no specific order, until the token `DONE` is read, at which point the program will run, ignoring additional input (if any). Lines beginning with hash '#' character are ignored. For example, to enter as standard input, use the MPI launcher (mpiexec, mpirun, ibrun, aprun, etc.) appropriate to your system:
+
+    $ mpiexec -n 8 ./seism-core-slice 
+
+Then enter the seism-core commands:
+
+    # default test set
+    processor 2 2 2
+    chunk 180 128 128
+    domain 360 128 128
+    time 5
+    precreate
+    collective_write
+    set_collective_metadata
+    never_fill
+    DONE
+
+As soon is `DONE` is read, the program stops receiving input and runs. The above input is used when running `make check-slice` in the section BUILDING.
+
+---
+
+##  PROGRAM INPUTS
 
 ### processor
 
@@ -36,7 +63,7 @@ will cause the kernel program and its corresponding test program to be built, ru
 
 ### domain
 
-*domain* is followed by a tuple, e.g. `360 128 256` describing size of domain to be handled by a single processor, which should be chunk size or larger. 
+*domain* is followed by a tuple, e.g. `360 128 256` describing size of domain to be handled by a single processor, which should be equal to chunk size or larger. 
 
 ### time
 
@@ -81,29 +108,6 @@ Specify this to keep HDF5 from explicitly writing a fill value. The filesystem w
 
     // Implementation in C
     if (never_fill) assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
-
----
-
-## RUNNING AN EXAMPLE
-
-Example inputs can either be entered interactively, fed as standard input, or as a heredoc in a script. Each input is read as a single line, in no specific order, until the token `DONE` is read, at which point the program will run, ignoring additional input (if any). Lines beginning with hash '#' character are ignored. For example, to enter as standard input, use the MPI launcher (mpiexec, mpirun, ibrun, aprun, etc.) appropriate to your system:
-
-    $ mpiexec -n 8 ./seism-core-slice 
-
-Then enter the seism-core commands:
-
-    # default test set
-    processor 2 2 2
-    chunk 180 128 128
-    domain 360 128 128
-    time 5
-    precreate
-    collective_write
-    set_collective_metadata
-    never_fill
-    DONE
-
-As soon is `DONE` is read, the program stops receiving input and runs. The above input is used when running `make check-slice` in the section BUILDING.
 
 ---
 
