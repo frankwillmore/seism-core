@@ -40,6 +40,22 @@ using namespace std;
 
 #define CHUNKED_DSET_NAME "chunked"
 
+#if ! ( (H5_VERS_MAJOR == 1) && (H5_VERS_MINOR >= 10) )   
+
+herr_t H5Pset_all_coll_metadata_ops(hid_t fapl, hbool_t true_or_false)
+{
+    cout << "set_collective_metadata option only available with HDF5 version 1.10+\n" << endl;
+    return NULL;
+}
+
+herr_t H5Pget_all_coll_metadata_ops(hid_t dapl, hbool_t *actual_metadata_ops_collective )
+{
+    *actual_metadata_ops_collective = false;
+    return NULL; 
+}
+
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
   
 void precreate_0
@@ -251,8 +267,7 @@ int main(int argc, char** argv)
          0);
 
     // set collective metadata reads
-    if ((H5_VERS_MAJOR == 1) && (H5_VERS_MINOR >= 10) 
-            && set_collective_metadata)
+    if (set_collective_metadata)
     {
         assert(H5Pset_all_coll_metadata_ops(fapl, true) >=0 );
         assert(H5Pset_all_coll_metadata_ops(dapl, true) >=0 );
