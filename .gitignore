@@ -3,6 +3,7 @@ seism-core-slice
 seism-core-slice-*
 seism-core-test
 seism-core-check
+seism-core-check-static
 *.o
 *.h5
 Makefile
