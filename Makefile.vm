@@ -10,28 +10,17 @@ INCLUDES=-I$(HOME)/local/include
 CXXFLAGS=-Wall -pedantic -O2 -std=c++0x $(INCLUDES)
 CXXDEBUGFLAGS=-Wall -pedantic -O0 -g -std=c++0x -I/mnt/wrk/Frank.Willmore/usr/local/phdf5/include
 
-<<<<<<< HEAD
 MPIEXEC=mpiexec -f machinefile
 
 all: seism-core-slice seism-core-check
 
 check-slice: seism-core-slice seism-core-check
 	$(MPIEXEC) ./seism-core-slice < tests/check.in
-=======
-all: seism-core-slice seism-core-check
-
-check-slice: seism-core-slice seism-core-check
-	mpiexec -n 8 ./seism-core-slice < tests/check.in
->>>>>>> 804e0581c5ca3ee9b7b03c6dfb072a1b88c85917
 	./seism-core-check seism-test.h5
 	rm seism-test.h5
 
 check-slice-static: seism-core-slice-static seism-core-check-static
-<<<<<<< HEAD
 	$(MPIEXEC) ./seism-core-slice < tests/check.in
-=======
-	mpiexec -n 8 ./seism-core-slice < tests/check.in
->>>>>>> 804e0581c5ca3ee9b7b03c6dfb072a1b88c85917
 	./seism-core-check seism-test.h5
 	rm seism-test.h5
 
@@ -52,25 +41,15 @@ seism-core-slice: seism-core-slice.o seism-core-attributes.o
 	$(CXX) $(CXXFLAGS) seism-core-slice.o seism-core-attributes.o -o seism-core-slice -lstdc++
 
 seism-core-slice-static: seism-core-slice.o seism-core-attributes.o darshan-pnetcdf-stubs.o
-<<<<<<< HEAD
-	rm -f seism-core-slice
 	gcc -static seism-core-slice.o seism-core-attributes.o darshan-pnetcdf-stubs.o -Wall -pedantic -O2 -std=c++0x -I/home/willmore/local/include -o seism-core-slice -L/home/willmore/local/lib -lstdc++ /home/willmore/local/lib/libhdf5_hl.a /home/willmore/local/lib/libhdf5.a -lz -ldl -lm -Wl,-rpath -Wl,/home/willmore/local/lib -I/usr/local/include -L/usr/local/lib -L/home/willmore/local/lib -ldarshan -lz -Wl,@/home/willmore/local/share/ld-opts/darshan-base-ld-opts -Wl,-rpath -Wl,/usr/local/lib -Wl,--enable-new-dtags -lmpi -L/home/willmore/local/lib -Wl,--start-group -ldarshan -Wl,--end-group -lz -lrt -lpthread
 	ln -s seism-core-slice seism-core-slice-static
-=======
-	gcc -static seism-core-slice.o seism-core-attributes.o darshan-pnetcdf-stubs.o -Wall -pedantic -O2 -std=c++0x -I/home/willmore/local/include -o seism-core-slice -L/home/willmore/local/lib -lstdc++ /home/willmore/local/lib/libhdf5_hl.a /home/willmore/local/lib/libhdf5.a -lz -ldl -lm -Wl,-rpath -Wl,/home/willmore/local/lib -I/usr/local/include -L/usr/local/lib -L/home/willmore/local/lib -ldarshan -lz -Wl,@/home/willmore/local/share/ld-opts/darshan-base-ld-opts -Wl,-rpath -Wl,/usr/local/lib -Wl,--enable-new-dtags -lmpi -L/home/willmore/local/lib -Wl,--start-group -ldarshan -Wl,--end-group -lz -lrt -lpthread
->>>>>>> 804e0581c5ca3ee9b7b03c6dfb072a1b88c85917
 
 seism-core-check: seism-core-check.o seism-core-attributes.o
 	$(CXX) $(CXXFLAGS) seism-core-check.o seism-core-attributes.o -o seism-core-check -lstdc++ 
 
 seism-core-check-static: seism-core-check.o seism-core-attributes.o darshan-pnetcdf-stubs.o
-<<<<<<< HEAD
-	rm -f seism-core-check
 	gcc -static seism-core-check.o seism-core-attributes.o darshan-pnetcdf-stubs.o -Wall -pedantic -O2 -std=c++0x -I/home/willmore/local/include -o seism-core-check -L/home/willmore/local/lib -lstdc++ /home/willmore/local/lib/libhdf5_hl.a /home/willmore/local/lib/libhdf5.a -lz -ldl -lm -Wl,-rpath -Wl,/home/willmore/local/lib -I/usr/local/include -L/usr/local/lib -L/home/willmore/local/lib -ldarshan -lz -Wl,@/home/willmore/local/share/ld-opts/darshan-base-ld-opts -Wl,-rpath -Wl,/usr/local/lib -Wl,--enable-new-dtags -lmpi -L/home/willmore/local/lib -Wl,--start-group -ldarshan -Wl,--end-group -lz -lrt -lpthread
 	ln -s seism-core-check seism-core-check-static
-=======
-	gcc -static seism-core-check.o seism-core-attributes.o darshan-pnetcdf-stubs.o -Wall -pedantic -O2 -std=c++0x -I/home/willmore/local/include -o seism-core-check -L/home/willmore/local/lib -lstdc++ /home/willmore/local/lib/libhdf5_hl.a /home/willmore/local/lib/libhdf5.a -lz -ldl -lm -Wl,-rpath -Wl,/home/willmore/local/lib -I/usr/local/include -L/usr/local/lib -L/home/willmore/local/lib -ldarshan -lz -Wl,@/home/willmore/local/share/ld-opts/darshan-base-ld-opts -Wl,-rpath -Wl,/usr/local/lib -Wl,--enable-new-dtags -lmpi -L/home/willmore/local/lib -Wl,--start-group -ldarshan -Wl,--end-group -lz -lrt -lpthread
->>>>>>> 804e0581c5ca3ee9b7b03c6dfb072a1b88c85917
 
 #seism-core-check-debug: seism-core-check.cc seism-core-attributes.o
 #	$(CXX) $(STATIC) $(CXXDEBUGFLAGS) seism-core-check.cc seism-core-attributes.o -o seism-core-check -lstdc++ 
