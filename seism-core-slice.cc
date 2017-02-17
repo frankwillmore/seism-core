@@ -40,7 +40,7 @@ using namespace std;
 
 #define CHUNKED_DSET_NAME "chunked"
 
-#if ! ( (H5_VERS_MAJOR == 1) && (H5_VERS_MINOR >= 10) )   
+#if ! ( (H5_VERS_MAJOR == 1) && (H5_VERS_MINOR >= 9) )   
 
 herr_t H5Pset_all_coll_metadata_ops(hid_t fapl, hbool_t true_or_false)
 {
@@ -114,6 +114,7 @@ int main(int argc, char** argv)
     int precreate = 0;
     int set_collective_metadata = 0;
     int never_fill = 0;
+    int deflate = 0;
 
     if (mpi_rank==0)
     {
@@ -139,6 +140,8 @@ int main(int argc, char** argv)
               set_collective_metadata = true;
             if (!parameter.compare("never_fill"))
               never_fill = true;
+            if (!parameter.compare("deflate"))
+              cin >> deflate;
             getline(cin, rest_of_line); // read the rest of the line
         }
     }
@@ -156,6 +159,8 @@ int main(int argc, char** argv)
     assert(MPI_Bcast(&set_collective_metadata, 1, MPI_INT, 0, MPI_COMM_WORLD) 
            == MPI_SUCCESS);
     assert(MPI_Bcast(&never_fill, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+           MPI_SUCCESS);
+    assert(MPI_Bcast(&deflate, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
            MPI_SUCCESS);
 
     // check the arguments
@@ -183,6 +188,7 @@ int main(int argc, char** argv)
         cout << "Collective metadata requested:\t" << set_collective_metadata 
             << endl;
         cout << "H5D_FILL_TIME_NEVER set:\t" << never_fill << endl;
+        cout << "Deflate: \t\t\t" << deflate << endl;
         cout << endl;
     }
 
@@ -213,6 +219,7 @@ int main(int argc, char** argv)
     assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
     if (never_fill) assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
     assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
+    if (deflate != 0) assert(H5Pset_deflate (dcpl, deflate) >= 0);
 
     hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
     assert(dapl >= 0);
