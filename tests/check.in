@@ -6,9 +6,7 @@ time 5
 precreate
 collective_write
 set_collective_metadata
-early_allocation
 never_fill
 deflate 5
 DONE
-
 

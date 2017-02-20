@@ -1,8 +1,10 @@
 #!/usr/bin/make
 
 CXX=h5pcc
-CXXFLAGS=-Wall -pedantic -O2 -std=c++0x -I/mnt/wrk/Frank.Willmore/usr/local/phdf5/include
-CXXDEBUGFLAGS=-Wall -pedantic -O0 -g -std=c++0x -I/mnt/wrk/Frank.Willmore/usr/local/phdf5/include
+#CXXFLAGS=-Wall -pedantic -O2 -std=c++0x -I/mnt/wrk/Frank.Willmore/usr/local/phdf5/include
+INCLUDES=/mnt/wrk/Frank.Willmore/usr/local/phdf5/include
+CXXFLAGS=-Wall -pedantic -O2 -std=c++0x -I$(INCLUDES)
+CXXDEBUGFLAGS=-Wall -pedantic -O0 -g -std=c++0x -I$(INCLUDES)
 
 all: seism-core-slice seism-core-check
 
