@@ -1,0 +1,63 @@
+#!/usr/bin/make
+
+# assumes hdf5 is configured with --prefix=$HOME/local --enable-parallel
+
+
+CXX=h5pcc
+DARSHAN_PREFIX=$(HOME)/local
+#CXX=h5pcc -profile=$(DARSHAN_PREFIX)/share/mpi-profile/darshan-cc $(STATIC)
+INCLUDES=-I$(HOME)/local/include
+CXXFLAGS=-Wall -pedantic -O2 -std=c++0x $(INCLUDES)
+CXXDEBUGFLAGS=-Wall -pedantic -O0 -g -std=c++0x -I/mnt/wrk/Frank.Willmore/usr/local/phdf5/include
+
+MPIEXEC=mpiexec -f machinefile
+
+all: seism-core-slice seism-core-check
+
+check-slice: seism-core-slice seism-core-check
+	$(MPIEXEC) ./seism-core-slice < tests/check.in
+	./seism-core-check seism-test.h5
+	rm seism-test.h5
+
+check-slice-static: seism-core-slice-static seism-core-check-static
+	$(MPIEXEC) ./seism-core-slice < tests/check.in
+	./seism-core-check seism-test.h5
+	rm seism-test.h5
+
+seism-core-slice.o: seism-core-slice.cc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+seism-core-attributes.o: seism-core-attributes.cc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+seism-core-check.o: seism-core-check.cc 
+	$(CXX) $(CXXFLAGS) -c $< -o $@ 
+
+# This is required for static linking... linking the stubs library overrides the actual hdf5 call and we don't want that. 
+darshan-pnetcdf-stubs.o:  darshan-pnetcdf-stubs.c
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -I$(HOME)/darshan-3.1.2/darshan-runtime -I$(HOME)/darshan-3.1.2
+
+seism-core-slice: seism-core-slice.o seism-core-attributes.o 
+	$(CXX) $(CXXFLAGS) seism-core-slice.o seism-core-attributes.o -o seism-core-slice -lstdc++
+
+seism-core-slice-static: seism-core-slice.o seism-core-attributes.o darshan-pnetcdf-stubs.o
+	gcc -static seism-core-slice.o seism-core-attributes.o darshan-pnetcdf-stubs.o -Wall -pedantic -O2 -std=c++0x -I/home/willmore/local/include -o seism-core-slice -L/home/willmore/local/lib -lstdc++ /home/willmore/local/lib/libhdf5_hl.a /home/willmore/local/lib/libhdf5.a -lz -ldl -lm -Wl,-rpath -Wl,/home/willmore/local/lib -I/usr/local/include -L/usr/local/lib -L/home/willmore/local/lib -ldarshan -lz -Wl,@/home/willmore/local/share/ld-opts/darshan-base-ld-opts -Wl,-rpath -Wl,/usr/local/lib -Wl,--enable-new-dtags -lmpi -L/home/willmore/local/lib -Wl,--start-group -ldarshan -Wl,--end-group -lz -lrt -lpthread
+	ln -s seism-core-slice seism-core-slice-static
+
+seism-core-check: seism-core-check.o seism-core-attributes.o
+	$(CXX) $(CXXFLAGS) seism-core-check.o seism-core-attributes.o -o seism-core-check -lstdc++ 
+
+seism-core-check-static: seism-core-check.o seism-core-attributes.o darshan-pnetcdf-stubs.o
+	gcc -static seism-core-check.o seism-core-attributes.o darshan-pnetcdf-stubs.o -Wall -pedantic -O2 -std=c++0x -I/home/willmore/local/include -o seism-core-check -L/home/willmore/local/lib -lstdc++ /home/willmore/local/lib/libhdf5_hl.a /home/willmore/local/lib/libhdf5.a -lz -ldl -lm -Wl,-rpath -Wl,/home/willmore/local/lib -I/usr/local/include -L/usr/local/lib -L/home/willmore/local/lib -ldarshan -lz -Wl,@/home/willmore/local/share/ld-opts/darshan-base-ld-opts -Wl,-rpath -Wl,/usr/local/lib -Wl,--enable-new-dtags -lmpi -L/home/willmore/local/lib -Wl,--start-group -ldarshan -Wl,--end-group -lz -lrt -lpthread
+	ln -s seism-core-check seism-core-check-static
+
+#seism-core-check-debug: seism-core-check.cc seism-core-attributes.o
+#	$(CXX) $(STATIC) $(CXXDEBUGFLAGS) seism-core-check.cc seism-core-attributes.o -o seism-core-check -lstdc++ 
+
+clean:
+	rm -f *.o *.h5
+
+veryclean: clean
+	rm -f seism-core seism-core-slice seism-core-slicexx seism-core-check
+
+
