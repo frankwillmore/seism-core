@@ -40,7 +40,7 @@ using namespace std;
 
 #define CHUNKED_DSET_NAME "chunked"
 
-#if ! ( (H5_VERS_MAJOR == 1) && (H5_VERS_MINOR >= 10) )   
+#if ! ( (H5_VERS_MAJOR == 1) && (H5_VERS_MINOR >= 9) )   
 
 herr_t H5Pset_all_coll_metadata_ops(hid_t fapl, hbool_t true_or_false)
 {
