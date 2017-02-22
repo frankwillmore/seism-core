@@ -2,6 +2,22 @@
 
 The main reference for this I/O kernel is Leigh Orf's description
 [An I/O strategy for CM1 on Blue Waters](http://orf.media/wp-content/uploads/2015/11/cm1tools-November2015.pdf).
+It simulates the write pattern of his CM1-ET5 code. As stated in his description,
+his goals are to:
+
+1. reduce the number of files written to a reasonable number
+2. minimize the number of times you are doing actual I/O to the Lustre file
+   system
+3. write big files
+4. make it easy for users to read in data for analysis and visualization after
+   it is written
+
+He achieves his first goal, by creating one HDF5 file per node (32 cores on
+Blue Waters). The second and third goal are achieved by buffering data in
+memory using the HDF5 Core Virtual File Driver. That means that until
+the HDF5 file is closed all I/O operations are performed in memory.
+Upon file closure, the entire file (~40 GB) is written in a single POSIX
+write operation to the Luster file system.
 
 ## Running `h5core`
 
@@ -24,9 +40,9 @@ for a sample output file. The output begins with the parameters chosen for this
 run. This is followed by the memory usage before any memory allocation by the
 kernel. The time for writing the HDF5 datasets to the (in-memory) HDF5 file
 is referred to as *Total time for buffering chunks to memory*.
-This is followed by the memory usage before and after closing the HDF5 file.
-Finally, the effective, per-process write-throughput (total bytes written /
-total time) is printed.
+This is followed by the memory usage before and after closing the HDF5 file, and
+the time for `H5Fclose`. Finally, the effective, per-process write-throughput
+(total bytes written / total time) is printed.
 
     Write to disk: NO
     Increment size: 536870912 [bytes]
