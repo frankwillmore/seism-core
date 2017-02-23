@@ -53,17 +53,21 @@ As soon is `DONE` is read, the program stops receiving input and runs. The above
 
 ##  PROGRAM INPUTS
 
+![drawing](storage_domain.png )
+
 ### processor
 
-*processor* is followed by a tuple, e.g. `2 2 4` which describes the dimensions of the three-dimensional grid of processors to be utilized to form the domain. `2 2 4` results in 16 total processors being used. 
+*processor* is followed by an 'x y z' tuple, e.g. `5 4 2` which describes how the three-dimensional physical domain is mapped to a grid of processors, as shown in the figure. `5 4 2` results in 40 total processors being used. 
 
 ### chunk
 
-*chunk* is followed by a tuple, e.g. `180 128 128` describing the size of data chunks to be used for the chunked dataset. 
+*chunk* is followed by an 'x y z' tuple, e.g. `6 2 3` as shown in the figure. Chunk describes the size and dimensions of data chunks stored in the chunked dataset. 
 
 ### domain
 
-*domain* is followed by a tuple, e.g. `360 128 256` describing size of domain to be handled by a single processor, which should be equal to chunk size or larger. 
+*domain* is followed by a tuple, e.g. `4 4 4` as shown in the figure, describing the size of domain (number of elements in each direction) to be handled by a single processor. Domain is independent of chunk size, although it would typically be equal to chunk size or larger.  
+
+Domain and chunk sizes specified here are very small for purposes of illustration. Typical dimensions might be hundreds or thousands of elements. The mapping of chunks to processors for purposes of I/O is a separate matter, handled internally by the HDF5 library. 
 
 ### time
 
