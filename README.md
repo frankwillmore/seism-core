@@ -61,13 +61,13 @@ As soon is `DONE` is read, the program stops receiving input and runs. The above
 
 ### chunk
 
-*chunk* is followed by an 'x y z' tuple, e.g. `6 2 3` as shown in the figure. Chunk describes the size and dimensions of data chunks stored in the chunked dataset. 
+*chunk* is followed by an 'x y z' tuple, e.g. `6 2 3` as illustrated by the colored blocks in the figure. Chunk describes the size and dimensions of data chunks stored in the chunked dataset. 
 
 ### domain
 
-*domain* is followed by a tuple, e.g. `4 4 4` as shown in the figure, describing the size of domain (number of elements in each direction) to be handled by a single processor. Domain is independent of chunk size, although it would typically be equal to chunk size or larger.  
+*domain* is followed by a tuple, e.g. `4 4 4` as shown in the figure, describing the extents of each block of domain (number of elements in each direction) to be handled by a single processor. Domain is independent of chunk size, although it would typically be equal to chunk size or larger.  
 
-Domain and chunk sizes specified here are very small for purposes of illustration. Typical dimensions might be hundreds or thousands of elements. The mapping of chunks to processors for purposes of I/O is a separate matter, handled internally by the HDF5 library. 
+How chunks and domains map to one another is highly configurable.  To simplify, set chunk size equal to domain size. Note that domain and chunk sizes specified here are very small for purposes of illustration. Typical dimensions might be hundreds or thousands of elements. The mapping of chunks to processors for purposes of I/O is a separate matter, handled internally by the HDF5 library. 
 
 ### time
 
