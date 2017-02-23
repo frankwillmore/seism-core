@@ -1,35 +1,19 @@
 #!/usr/bin/env make
 
-#  remember to: module load cray-hdf5-parallel 
-#CXX=h5pcc
+#  remember to load hdf5 module load 
+
+HDF5_INSTALL_DIR=/sw/bw/thg/phdf5/1.9.236cast
 CXX=CC
-#CXXFLAGS=-O2 -lstdc++ 
-CXXFLAGS=-O2 -lstdc++ -dynamic
-CXX_INCLUDES=/usr/include/c++/4.3/
-IFLAGS:=-I/u/sciteam/willmore/local/phdf5-1.10.0-install/include -I${CXX_INCLUDES}
-LFLAGS:=-L/u/sciteam/willmore/local/phdf5-1.10.0-install/lib -lhdf5
+CXXFLAGS=-DCRAYCC -O2 -dynamic
 
 default:
 	@printf "\033[31;01m' *** See instructions in Makefile, for prerequisites on building with 1.10.0 with two versions ***\033[0m\n"
 
-seism-core-slice: 
-	@printf "\033[31;01m *** building the default version (seism-core-slice-bw) with default cray-hdf5-parallel/1.10.0 version ***\033[0m\n"
-	make seism-core-slice-bw
-
-# Make using my installed 1.10.0_patch1 version
-# seism-core-slice-patch: seism-core-slice.cc
-#	@printf "\033[31;01m\n\n*** Make sure to source ~/local/build_hdf5/NCSA_Blue_Waters/env_hdf5-1.10.0.sh to get the right environment when running ***\n\n\033[0m"
-#	CC -I/u/sciteam/willmore/local/phdf5-1.10.0-install/include -DCRAYCC -dynamic -O2 -lstdc++ -L/u/sciteam/willmore/local/phdf5-1.10.0-install/lib -lhdf5 -L/opt/cray/mpt/7.2.4/gni/mpich2-CRAY64/8.3/lib -lmpichcxx_cray_default64 seism-core-slice.cc -o seism-core-slice-patch
-
-# Build using the system-installed 1.10.0 module... note that Darshan should be disabled as it causes an error of as-yet-unkown origin
-# module load cray-hdf5-parallel/1.10.0
-# module unload darshan
-seism-core-slice-bw: seism-core-slice.o seism-core-attributes.o 
-	CC -DCRAYCC -dynamic -O2 -lhdf5 seism-core-attributes.o seism-core-slice.o -o seism-core-slice-bw
-	ln -s seism-core-slice-bw seism-core-slice
+seism-core-slice: seism-core-slice.o seism-core-attributes.o 
+	$(CXX) $(CXXFLAGS) -lstdc++ -lhdf5 seism-core-attributes.o seism-core-slice.o -o seism-core-slice
 
 seism-core-slice.o: seism-core-slice.cc 
-	CC -DCRAYCC -dynamic -O2 -lhdf5 -c seism-core-slice.cc -o seism-core-slice.o
+	$(CXX) $(CXXFLAGS) -c seism-core-slice.cc -o seism-core-slice.o
 
 seism-core-attributes.o: seism-core-attributes.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
