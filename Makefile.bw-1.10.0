@@ -1,10 +1,11 @@
 #!/usr/bin/env make
 
-#  remember to load hdf5 module load 
+#  remember to load hdf5 module 
 
 HDF5_INSTALL_DIR=/sw/bw/thg/phdf5/1.9.236cast
 CXX=CC
 CXXFLAGS=-DCRAYCC -O2 -dynamic
+#CXXFLAGS=-O2 -dynamic
 
 default:
 	@printf "\033[31;01m' *** See instructions in Makefile, for prerequisites on building with 1.10.0 with two versions ***\033[0m\n"
