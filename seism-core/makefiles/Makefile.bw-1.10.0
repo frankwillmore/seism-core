@@ -24,7 +24,7 @@ seism-core-check: seism-core-check.cc seism-core-attributes.o
 
 check-slice: seism-core-slice seism-core-check
 	@printf "\033[31;01m *** generating test file for 2x2x2 domain ***\033[0m\n"
-	aprun -N 8 -n 8 ./seism-core-slice < tests/check.in
+	aprun -N 8 -n 8 ./seism-core-slice < ../tests/check.in
 	@printf "\033[31;01m *** test file created ***\033[0m\n"
 	./seism-core-check seism-test.h5
 	@printf "\033[31;01m *** check complete ***\033[0m\n\n"
