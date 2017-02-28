@@ -7,7 +7,7 @@
 
 SEISM-CORE is a minimal kernel used for measuring the write throughput experienced by a typical parallel application writing checkpoints to an HDF5 file. A list of tuning parameters and code snippets showing their implementation is shown in PROGRAM INPUTS section.
 
-![drawing](timesteps.png )
+![drawing](docs/timesteps.png )
 
 Consecutive three-dimensional slices of a four-dimensional dataset are written for an increasing timestep index. The slices represent simulation data, being checkpointed after each simulation timestep. 
 
@@ -15,14 +15,16 @@ Consecutive three-dimensional slices of a four-dimensional dataset are written f
 
 ## BUILDING
 
-It is assumed that the user has HDF5 installed on their system and wields basic knowledge for the compilation and linking of an HDF5-capable code on their platform. Sample Makefiles are provided for two systems:
+It is assumed that the user has HDF5 installed on their system and wields basic knowledge for the compilation and linking of an HDF5-capable code on their platform. Sample Makefiles are provided in the directory 'makefiles', for the following systems:
 
 * Makefile.bw-1.10.0 for NCSA Blue Waters, using HDF5 version 1.10.0
 * Makefile.jelly for a large shared-memory CentOS system used internally at The HDF Group
+* Makefile.vm for a cluster of VirtualBox vms with Ubuntu, used for testing
 
 To build and install on a different system, select the most similar architecture and modify as needed.  In either case, running:
 
-    $ make -f Makefile.whichever_architecture check-slice
+    $ cd src
+    $ make -f ../makefiles/Makefile.whichever_architecture check-slice
 
 will cause the kernel program and its corresponding test program to be built, run, and output checked based on the input file `tests/check.in`. 
 
@@ -53,7 +55,7 @@ As soon is `DONE` is read, the program stops receiving input and runs. The above
 
 ##  PROGRAM INPUTS
 
-![drawing](storage_domain.png )
+![drawing](docs/storage_domain.png )
 
 ### processor
 
