@@ -1,0 +1,40 @@
+#!/usr/bin/env make
+
+#  remember to load hdf5 module 
+
+HDF5_INSTALL_DIR=/sw/bw/thg/phdf5/1.9.236cast
+CXX=CC
+CXXFLAGS=-DCRAYCC -O2 -dynamic
+#CXXFLAGS=-O2 -dynamic
+
+default:
+	@printf "\033[31;01m' *** See instructions in Makefile, for prerequisites on building with 1.10.0 with two versions ***\033[0m\n"
+
+seism-core-slice: seism-core-slice.o seism-core-attributes.o 
+	$(CXX) $(CXXFLAGS) -lstdc++ -lhdf5 seism-core-attributes.o seism-core-slice.o -o seism-core-slice
+
+seism-core-slice.o: seism-core-slice.cc 
+	$(CXX) $(CXXFLAGS) -c seism-core-slice.cc -o seism-core-slice.o
+
+seism-core-attributes.o: seism-core-attributes.cc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+seism-core-check: seism-core-check.cc seism-core-attributes.o
+	$(CXX) $(CXXFLAGS) seism-core-check.cc seism-core-attributes.o -o seism-core-check -lstdc++
+
+check-slice: seism-core-slice seism-core-check
+	@printf "\033[31;01m *** generating test file for 2x2x2 domain ***\033[0m\n"
+	aprun -N 8 -n 8 ./seism-core-slice < tests/check.in
+	@printf "\033[31;01m *** test file created ***\033[0m\n"
+	./seism-core-check seism-test.h5
+	@printf "\033[31;01m *** check complete ***\033[0m\n\n"
+	@printf "\033[31;01m *** removing test file ***\033[0m\n\n"
+	rm seism-test.h5
+	@printf "\033[31;01m *** done ***\033[0m\n\n"
+
+clean:
+	rm -f *.o *.h5
+
+veryclean: clean
+	rm -f seism-core-slice-* seism-core-slice seism-core-check
+
