@@ -8,5 +8,6 @@ collective_write
 set_collective_metadata
 never_fill
 deflate 5
+zfp 1
 DONE
 

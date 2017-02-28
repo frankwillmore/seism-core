@@ -28,6 +28,7 @@
 
 #include "hdf5.h"
 
+#include <H5Zzfp.h>
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -115,6 +116,7 @@ int main(int argc, char** argv)
     int set_collective_metadata = 0;
     int never_fill = 0;
     int deflate = 0;
+	int zfp = 0;
 
     if (mpi_rank==0)
     {
@@ -142,6 +144,8 @@ int main(int argc, char** argv)
               never_fill = true;
             if (!parameter.compare("deflate"))
               cin >> deflate;
+            if (!parameter.compare("zfp"))
+              cin >> zfp;
             getline(cin, rest_of_line); // read the rest of the line
         }
     }
@@ -160,8 +164,8 @@ int main(int argc, char** argv)
            == MPI_SUCCESS);
     assert(MPI_Bcast(&never_fill, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
            MPI_SUCCESS);
-    assert(MPI_Bcast(&deflate, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
-           MPI_SUCCESS);
+    assert(MPI_Bcast(&deflate, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
+    assert(MPI_Bcast(&zfp, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
 
     // check the arguments
     assert(time > 0);
@@ -189,6 +193,7 @@ int main(int argc, char** argv)
             << endl;
         cout << "H5D_FILL_TIME_NEVER set:\t" << never_fill << endl;
         cout << "Deflate: \t\t\t" << deflate << endl;
+        cout << "ZFP: \t\t\t\t" << zfp << endl;
         cout << endl;
     }
 
@@ -220,6 +225,15 @@ int main(int argc, char** argv)
     if (never_fill) assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
     assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
     if (deflate != 0) assert(H5Pset_deflate (dcpl, deflate) >= 0);
+    
+	// ZFP
+	size_t cd_nelmts = 4;
+	unsigned int cd_values[] = {3, 0, 0, 0};
+    if (zfp != 0) 
+	{
+		assert(H5Z_zfp_initialize() >= 0);
+		assert(H5Pset_filter(dcpl, H5Z_FILTER_ZFP, H5Z_FLAG_MANDATORY,cd_nelmts, cd_values) >= 0);
+	}
 
     hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
     assert(dapl >= 0);
@@ -350,6 +364,9 @@ int main(int argc, char** argv)
     double stop_chunked = MPI_Wtime();
 
     ///////////////////////////////////////////////////////////////////////////
+	
+	// get storage size before closing dataset
+	hsize_t storage_size = H5Dget_storage_size(dset_chunked);
 
     assert(H5Dclose(dset_chunked) >= 0);
     assert(H5Pclose(fapl) >= 0);
@@ -357,6 +374,9 @@ int main(int argc, char** argv)
     assert(H5Pclose(dxpl) >= 0);
     assert(H5Sclose(fspace) >= 0);
     assert(H5Pclose(dcpl) >= 0);
+
+    if (zfp != 0) assert(H5Z_zfp_finalize() >= 0);
+
     // verify that metadata ops actually performed collectively
     hbool_t actual_metadata_ops_collective;
     H5Pget_all_coll_metadata_ops( dapl, &actual_metadata_ops_collective );
@@ -408,6 +428,8 @@ int main(int argc, char** argv)
         cout << "Mdata ops actually collective:\t" 
              << actual_metadata_ops_collective
              << endl;
+		cout << "Total bytes written:\t\t" << bytes_written << endl; 
+		cout << "Compressed size in bytes:\t" << storage_size << endl; 
 
     }
 
