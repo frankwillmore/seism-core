@@ -1,7 +1,7 @@
 nx,ny,nz,ng
    256,256,256,2
 iprc,jprc,kprc
-   8,4,4
+   4,4,4
 relay,relay size
    1,32
 write flag

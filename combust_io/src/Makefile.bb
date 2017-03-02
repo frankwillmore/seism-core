@@ -8,11 +8,11 @@ all: kernel
 kernel: KERNEL.o
 	$(FC) IO.o KERNEL.o -o kernel.x
 
-KERNEL.o: IO.o KERNEL.F90
-	$(FC) $(FFLAGS) -c KERNEL.F90
+KERNEL.o: IO.o src/KERNEL.F90
+	$(FC) $(FFLAGS) -c src/KERNEL.F90
 
-IO.o: IO.F90
-	$(FC) $(FFLAGS) -c IO.F90
+IO.o: src/IO.F90
+	$(FC) $(FFLAGS) -c src/IO.F90
 
 clean:
 	rm -f *.o *.mod
