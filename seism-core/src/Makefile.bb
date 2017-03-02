@@ -10,7 +10,7 @@ seism-core-slice: seism-core-slice.o seism-core-attributes.o
 	$(CXX) $(CXXFLAGS) seism-core-attributes.o seism-core-slice.o -o $@ -lstdc++
 
 check-slice: seism-core-slice seism-core-check
-	mpiexec -n 8 ./seism-core-slice < ../tests/check-0.in
+	mpiexec -n 8 ./seism-core-slice < ./tests/check-0.in
 	./seism-core-check seism-test.h5
 	rm seism-test.h5
 
