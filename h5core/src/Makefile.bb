@@ -5,7 +5,7 @@ all: h5core
 h5core: h5core.o
 	$(CC) h5core.o -o $@
 
-h5core.o: h5core.c
+h5core.o: src/h5core.c
 	$(CC) $(CCLAGS) -c $< -o $@
 
 clean:
@@ -15,5 +15,5 @@ veryclean: clean
 	rm -f h5core
 
 check:
-	../scripts/h5core
+	./scripts/h5core
 	

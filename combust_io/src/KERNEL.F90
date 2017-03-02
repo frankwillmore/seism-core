@@ -121,9 +121,9 @@ REAL(KIND=RWP),PARAMETER :: PI = ACOS(-1.0_RWP)
 ! Main user inputs to the code. To be read from the input file.
 !
 !> Size of rectlinear grid and number of ghost layers.
-INTEGER :: nx,ny,nz,ng
+INTEGER,TARGET :: nx,ny,nz,ng
 !> Number of processors in the three coordinate directions.
-INTEGER :: iprc,jprc,kprc
+INTEGER,TARGET :: iprc,jprc,kprc
 !> Used to control the relay scheme when reading in data.
 INTEGER :: relay,relay_size
 !> Used to control if data is written out.
@@ -135,9 +135,9 @@ INTEGER(KIND=HSIZE_T),DIMENSION(3) :: chunk_h5
 ! MPI related variables.
 !
 !> Number of processors and rank in main communicator.
-INTEGER :: nprc,rank
+INTEGER,TARGET :: nprc,rank
 !> Coordinates of this process in the 3D process layout.
-INTEGER :: ipid,jpid,kpid
+INTEGER,TARGET :: ipid,jpid,kpid
 !> Communicator used for parallel IO.
 INTEGER :: io_comm
 !> Number of processors and rank in IO communicator.
@@ -388,7 +388,7 @@ SUBROUTINE WRITE_CHECKPOINT_2D(buf)
    IMPLICIT NONE
    ! Calling arguments.
    REAL(KIND=RWP),DIMENSION(-ng+1:nxp+ng,-ng+1:nyp+ng,-ng+1:nzp+ng), &
-      INTENT(IN) :: buf
+      INTENT(IN),TARGET :: buf
    ! Local variables.
    ! HDF5 identifier for the files.
    INTEGER(KIND=HID_T) :: file_id

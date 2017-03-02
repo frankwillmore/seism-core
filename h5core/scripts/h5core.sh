@@ -1,1 +1,1 @@
-../h5core
+./h5core

@@ -21,4 +21,4 @@ veryclean: clean
 	rm -f *.x *~
 
 check:
-	sh ./kernel.sh
+	sh ./scripts/kernel.sh
