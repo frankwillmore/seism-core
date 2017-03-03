@@ -1,0 +1,901 @@
+{
+    "tests": {
+        "hdf4trunk": {
+            "StdRelease": {
+                "projgroup": ["Distribute"],
+                "bbparams": {
+                    "platforms": ["centos7", "VS14", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf4trunk/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest",
+                        "btautotools"
+                    ]
+                }
+            },
+            "StdStat": {
+                "projgroup": ["Binary", "Nightly", "Analysis"],
+                "bbparams": {
+                    "platforms": ["centos7", "vs14", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf4trunk/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "autotools",
+                        "btctest",
+                        "btautotools",
+                        "coverage",
+                        "valgrind"
+                    ]
+                }
+            },
+            "StdShar": {
+                "projgroup": ["Binary", "Nightly", "Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian", "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf4trunk/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "cmake",
+                        "ctest",
+                        "autotools",
+                        "btctest",
+                        "btautotools"
+                    ]
+                }
+            },
+            "StdDBGShar": {
+                "projgroup": ["Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian", "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf4trunk/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Debug"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools"
+                    ]
+                }
+            }
+        },
+        "hdf4examples": {
+            "StdStat": {
+                "projgroup": ["Nightly", "Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian", "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "install": "true",
+                        "config": [
+                            {"hdf4examples/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publishsource": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest"
+                    ]
+                }
+            },
+            "StdShar": {
+                "projgroup": ["Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "vs14", "osx1011"],
+                    "envparams": {
+                        "install": "true",
+                        "config": [
+                            {"hdf4examples/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"}
+                    ],
+                    "buildsys": [
+                        "cmake",
+                        "ctest"
+                    ]
+                }
+            }
+        },
+        "hdf5trunk": {
+            "StdStat": {
+                "projgroup": ["Nightly", "Analysis"],
+                "bbparams": {
+                    "platforms": ["centos7", "vs14", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5trunk/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "autotools",
+                        "coverage",
+                        "valgrind"
+                    ]
+                }
+            },
+            "StdShar": {
+                "projgroup": ["Binary", "Nightly", "Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian", "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5trunk/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "cmake",
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "StdDBGShar": {
+                "projgroup": ["Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian", "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5trunk/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Debug"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools"
+                    ]
+                }
+            },
+            "VFDShar": {
+                "projgroup": ["Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian", "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5trunk/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools"
+                    ]
+                }
+            },
+            "TSShar": {
+                "projgroup": ["Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian", "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5trunk/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "NoSZipShar": {
+                "projgroup": ["Binary", "Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian", "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5trunk/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "StdSharDev": {
+                "projgroup": ["Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "vs14", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5trunk/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"}
+                    ],
+                    "buildsys": [
+                        "autotools"
+                    ]
+                }
+            },
+            "StdMPIShar": {
+                "projgroup": ["Binary", "Nightly", "Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5trunk/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                   "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            }
+        },
+        "hdf5examplestrunk": {
+            "StdStat": {
+                "projgroup": ["Nightly", "Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian", "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "install": "true",
+                        "config": [
+                            {"hdf5examples/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publishsource": "True"}
+                    ],
+                    "buildsys": [
+                        "autotools",
+                        "ctest"
+                    ]
+                }
+            },
+            "StdShar": {
+                "projgroup": ["Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "vs14", "osx1011"],
+                    "envparams": {
+                        "install": "true",
+                        "config": [
+                            {"hdf5examples/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"}
+                    ],
+                    "buildsys": [
+                        "cmake",
+                        "ctest",
+                        "autotools"
+                    ]
+                }
+            }
+        },
+        "hdf518": {
+            "StdRelease": {
+                "projgroup": ["Distribute"],
+                "bbparams": {
+                    "platforms": ["centos7", "VS14", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf518/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "TSRelease": {
+                "projgroup": ["Distribute"],
+                "bbparams": {
+                    "platforms": ["centos7", "VS14", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf518/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "NoSZipRelease": {
+                "projgroup": ["Distribute"],
+                "bbparams": {
+                    "platforms": ["centos7", "VS14", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf518/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "StdStat": {
+                "projgroup": ["Nightly", "Analysis"],
+                "bbparams": {
+                    "platforms": ["centos7", "vs14", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf518/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "autotools",
+                        "coverage",
+                        "valgrind"
+                    ]
+                }
+            },
+            "StdShar": {
+                "projgroup": ["Binary", "Nightly", "Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian", "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf518/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "cmake",
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "StdDBGShar": {
+                "projgroup": ["Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian", "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf518/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Debug"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools"
+                    ]
+                }
+            },
+            "VFDShar": {
+                "projgroup": ["Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian",  "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf518/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools"
+                    ]
+                }
+            },
+            "TSShar": {
+                "projgroup": ["Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian",  "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf518/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "NoSZipShar": {
+                "projgroup": ["Binary", "Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian",  "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf518/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "StdMPIShar": {
+                "projgroup": ["Binary", "Nightly", "Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian"],
+                    "envparams": {
+                        "config": [
+                            {"hdf518/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            }
+        },
+        "hdf5examples18": {
+            "StdStat": {
+                "projgroup": ["Nightly", "Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian",  "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "install": "true",
+                        "config": [
+                            {"hdf5examples/": "bb18tconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publishsource": "True"}
+                    ],
+                    "buildsys": [
+                        "autotools",
+                        "ctest"
+                    ]
+                }
+            },
+            "StdShar": {
+                "projgroup": ["Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "vs14", "osx1011"],
+                    "envparams": {
+                        "install": "true",
+                        "config": [
+                            {"hdf5examples/": "bb18tconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"}
+                    ],
+                    "buildsys": [
+                        "cmake",
+                        "ctest",
+                        "autotools"
+                    ]
+                }
+            }
+        },
+        "hdf5110": {
+            "StdRelease": {
+                "projgroup": ["Distribute"],
+                "bbparams": {
+                    "platforms": ["centos7", "VS14", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5110/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                   "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "TSRelease": {
+                "projgroup": ["Distribute"],
+                "bbparams": {
+                    "platforms": ["centos7", "VS14", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5110/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "NoSZipRelease": {
+                "projgroup": ["Distribute"],
+                "bbparams": {
+                    "platforms": ["centos7", "VS14", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5110/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "StdStat": {
+                "projgroup": ["Nightly", "Analysis"],
+                "bbparams": {
+                    "platforms": ["centos7", "vs14", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5110/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "autotools",
+                        "coverage",
+                        "valgrind"
+                    ]
+                }
+            },
+            "StdShar": {
+                "projgroup": ["Binary", "Nightly", "Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian",  "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5110/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                   "buildsys": [
+                        "cmake",
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "StdDBGShar": {
+                "projgroup": ["Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian",  "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5110/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Debug"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools"
+                    ]
+                }
+            },
+            "VFDShar": {
+                "projgroup": ["Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian",  "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5110/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools"
+                    ]
+                }
+            },
+            "TSShar": {
+                "projgroup": ["Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian",  "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5110/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "NoSZipShar": {
+                "projgroup": ["Binary", "Nightly"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian",  "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5110/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            },
+            "StdMPIShar": {
+                "projgroup": ["Binary", "Nightly", "Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian"],
+                    "envparams": {
+                        "config": [
+                            {"hdf5110/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "RelWithDebInfo"},
+                        {"publish": "True"}
+                    ],
+                   "buildsys": [
+                        "ctest",
+                        "autotools",
+                        "btctest"
+                    ]
+                }
+            }
+        },
+        "hdf5examples110": {
+            "StdStat": {
+                "projgroup": ["Nightly", "Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian",  "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "install": "true",
+                        "config": [
+                            {"hdf5examples/": "bb110tconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publishsource": "True"}
+                    ],
+                    "buildsys": [
+                        "autotools",
+                        "ctest"
+                    ]
+                }
+            },
+            "StdShar": {
+                "projgroup": ["Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "vs14", "osx1011"],
+                    "envparams": {
+                        "install": "true",
+                        "config": [
+                            {"hdf5examples/": "bb110tconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"}
+                    ],
+                    "buildsys": [
+                        "cmake",
+                        "ctest",
+                        "autotools"
+                    ]
+                }
+            }
+        },
+        "hdfviewtrunk": {
+            "Standard": {
+                "projgroup": ["Nightly", "Change", "Ant"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "install": "true",
+                        "config": [
+                            {"hdfview/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publish": "True"}
+                    ],
+                    "buildsys": [
+                        "ant"
+                    ]
+                }
+            }
+        },
+        "hdf5perftrunk": {
+            "StdMPITrunk": {
+                "projgroup": ["Change"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian"],
+                    "envparams": {
+                        "install": "true",
+                        "config": [
+                            {"hdf5perf/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publish": "False"},
+                        {"loopon": "perfs"},
+                        {"perfs": ["combust_io", "h5core", "h5perf", "seism-core"]}
+                    ],
+                    "buildsys": [
+                        "autotools"
+                    ]
+                }
+            }
+        },
+        "hdf5plugintrunk": {
+            "StdTrunk": {
+                "projgroup": ["Nightly", "Binary"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian",  "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                        "install": "true",
+                        "config": [
+                            {"hdf5plugin/": "bbtconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publish": "True"},
+                        {"loopon": "filters"},
+                        {"filters": ["BLOSC", "BZIP2", "LZ4", "MAFISC"]}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "btctest"
+                    ]
+                }
+            }
+        },
+        "hdf5plugin18": {
+            "Standard": {
+                "projgroup": ["Nightly", "Binary"],
+                "bbparams": {
+                    "platforms": ["centos7", "ubuntu", "fedora", "opensuse", "debian",  "VS11", "VS12", "VS14", "10VS14", "osx1010", "osx1011"],
+                    "envparams": {
+                          "install": "true",
+                      "config": [
+                            {"hdf5plugin/": "bb18tconf.json"}
+                        ]
+                    },
+                    "testparams": [
+                        {"buildtype": "Release"},
+                        {"publish": "True"},
+                        {"loopon": "filters"},
+                        {"filters": ["BLOSC", "BZIP2", "LZ4"]}
+                    ],
+                    "buildsys": [
+                        "ctest",
+                        "btctest"
+                    ]
+                }
+            }
+        }
+    }
+}
