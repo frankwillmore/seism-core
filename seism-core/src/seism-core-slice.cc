@@ -33,6 +33,8 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <dlfcn.h>
+#include <cstring>
 
 #include "seism-core-attributes.hh"
 
@@ -115,6 +117,12 @@ int main(int argc, char** argv)
     int set_collective_metadata = 0;
     int never_fill = 0;
     int deflate = 0;
+    char use_function_lib[256];
+    char use_function_name[256];
+    int use_function_argc = 0;
+    string use_function_argv_string;
+    char use_function_argv[256];
+    const char *use_function_argv_c_str;
 
     if (mpi_rank==0)
     {
@@ -142,6 +150,21 @@ int main(int argc, char** argv)
               never_fill = true;
             if (!parameter.compare("deflate"))
               cin >> deflate;
+            if (!parameter.compare("use_function_lib"))
+              cin >> use_function_lib;
+            if (!parameter.compare("use_function_name"))
+              cin >> use_function_name;
+            if (!parameter.compare("use_function_argc"))
+              cin >> use_function_argc;
+            if (!parameter.compare("use_function_argv"))
+            {
+              //cin >> use_function_argv;
+              getline(cin, use_function_argv_string); // read the rest of the line
+              cout << use_function_argv_string << endl;
+              use_function_argv_c_str = use_function_argv_string.c_str(); 
+              strcpy(use_function_argv, use_function_argv_c_str);
+              continue;
+            }
             getline(cin, rest_of_line); // read the rest of the line
         }
     }
@@ -162,6 +185,12 @@ int main(int argc, char** argv)
            MPI_SUCCESS);
     assert(MPI_Bcast(&deflate, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
            MPI_SUCCESS);
+    assert(MPI_Bcast(&use_function_lib, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
+    assert(MPI_Bcast(&use_function_name, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
+    assert(MPI_Bcast(&use_function_argc, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
+    assert(MPI_Bcast(&use_function_argv, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
+
+    cout << "got " << use_function_argv << endl;
 
     // check the arguments
     assert(time > 0);
@@ -264,6 +293,47 @@ int main(int argc, char** argv)
     ///////////////////////////////////////////////////////////////////////////
     // initialize the test data to MPI rank
     vector<float> v((size_t) domain[0]*domain[1]*domain[2], (float) mpi_rank);
+
+    // if we're loading a function, use it here, now.
+    // function will receive mpi_rank, argc, argv
+
+    if (strcmp(use_function_name, "") != 0) {
+
+cout << "using function " << use_function_name << endl;
+cout << "argc = " << use_function_argc;
+cout << "argv = " << use_function_argv;
+        void *handle;
+        // This awkward cast provided to you by the ISO standards team...
+        float (*use_function)(int, int, char **);
+        char *error;
+
+        handle = dlopen (use_function_lib, RTLD_LAZY);
+        if (!handle) {
+            fputs (dlerror(), stderr);
+            exit(1);
+        }
+
+        *(void **) (&use_function) = dlsym(handle, use_function_name);
+        if ((error = dlerror()) != NULL)  {
+            fputs(error, stderr);
+            exit(1);
+        }
+
+        // split the argv string
+        // const char **use_function_argv_array = (const char**)(sizeof(char*) * argc);;
+        // std::istringstream iss(string(use_function_argv));
+        // std::string token;
+        // for(int i=0; i<use_function_argc; i++) {
+        //     iss >> token;
+        //     use_function_argv_array[i] = token.c_str();
+        // }
+
+        for (unsigned index = 0; index < domain[0] * domain[1] * domain[2]; index++) {
+            v[index] = (*use_function)(mpi_rank, use_function_argc, (char **)use_function_argv);
+        }
+
+        dlclose(handle);
+    }
   
     // create the fapl
     hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
