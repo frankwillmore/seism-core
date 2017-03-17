@@ -58,4 +58,6 @@ qsub ./h5core_dev.pbs
 # We could cd back to /u/sciteam/lrknox/local/performance/h5core/src 
 # and make veryclean, but right now we're deleting the performance 
 # directory and downloading a new clone at the beginning, so it's not 
-# necessary.
+# strictly necessary.
+
+

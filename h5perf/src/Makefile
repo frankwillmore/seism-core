@@ -3,7 +3,7 @@ CC=h5pcc
 # craycc returns: ERROR in command line
 # The phase argument or the comma before the phase argument is 
 # missing for the -W option.
-CCFLAGS=-DSTANDALONE -Wall -O2
+CCFLAGS=-DSTANDALONE -O2
 
 all: h5perf
 
