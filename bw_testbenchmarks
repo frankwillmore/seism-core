@@ -1,0 +1,63 @@
+#! /bin/bash
+
+cd /u/sciteam/lrknox/local
+
+rm -rf /u/sciteam/lrknox/local/performance
+git clone https://git@bitbucket.hdfgroup.org/scm/hdffv/performance.git
+
+cd /u/sciteam/lrknox/local/performance
+
+# The following should be replaced by "make", but a top-level Makefile
+# with subdirs (SUBDIRS?) for each benchmark plus a top-level Makefile 
+# in each benchmark and probably other changes will be needed for that.
+
+
+. /opt/modules/default/init/bash
+module unload darshan
+module use /sw/bw/thg/modulefiles
+module load phdf5/1.10.0
+module load szip/2.1.1
+
+cd h5core/src
+make >& make_110.out
+if [ -d /u/sciteam/lrknox/scratch/h5core_110 ]; then
+    rm -rf /u/sciteam/lrknox/scratch/h5core_110/*
+else
+    mkdir -p /u/sciteam/lrknox/scratch/h5core_110
+fi
+
+cd /u/sciteam/lrknox/scratch/h5core_110
+cp /u/sciteam/lrknox/local/performance/h5core/src/h5core .
+# following is temporary path - will change to performance once checked in.
+cp /u/sciteam/lrknox/local/performance_lrk/h5core/scripts/h5core_110.pbs .
+
+qsub ./h5core_110.pbs
+
+cd /u/sciteam/lrknox/local/performance/h5core/src
+
+module unload phdf5/1.10.0
+module load phdf5/1.9.236
+
+make veryclean
+
+make >& make_develop.out
+
+if [ -d /u/sciteam/lrknox/scratch/h5core_dev ]; then
+    rm -rf /u/sciteam/lrknox/scratch/h5core_dev/*
+else
+    mkdir -p /u/sciteam/lrknox/scratch/h5core_dev
+fi
+
+cd /u/sciteam/lrknox/scratch/h5core_dev
+cp /u/sciteam/lrknox/local/performance/h5core/src/h5core .
+# following is temporary path - will change to performance once checked in.
+cp /u/sciteam/lrknox/local/performance_lrk/h5core/scripts/h5core_dev.pbs .
+
+qsub ./h5core_dev.pbs
+
+# We could cd back to /u/sciteam/lrknox/local/performance/h5core/src 
+# and make veryclean, but right now we're deleting the performance 
+# directory and downloading a new clone at the beginning, so it's not 
+# strictly necessary.
+
+
