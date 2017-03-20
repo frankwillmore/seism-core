@@ -115,6 +115,32 @@ Specify this to keep HDF5 from explicitly writing a fill value. The filesystem w
     // Implementation in C
     if (never_fill) assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
 
+## Dynamically loadable fill plugins
+
+By default, seism-core-slice will cast the MPI rank of the owning process to a float and set all values in its data buffer equal to this value. Specifying the following commands in the script will allow a user-defined set of contextual fill values to be specified via a dlopen() call. The reference implementation gives two examples:  The first is to write the same fill value (MPI rank) as is done without using a plugin. The second example writes the value of a 3D scaled Gaussian which, except for intrinsic symmetry of the function, is uniquely valued over the entire simulation domain. To use this feature: 
+
+* write a function with signature:
+    your_function_name(int mpi_rank, hsize_t* system_size, hsize_t* domain_block_size, hsize_t* domain_block_number, hsize_t* position_in_block, int argc, char **argv);
+* compile to object file as -fPIC (or however your compiler and platform mandate)
+* bundle object into shared library .so (or however your compiler and platform mandate)
+* make the library discoverable by placing it in your LD_LIBRARY_PATH
+
+### use_function_lib libplugins.so
+
+This option specifies the name of the library containing the function, e.g. libplugins.so in the reference implementation.
+
+### use_function_name gaussian
+
+Specify the name of the function within the library, e.g. gaussian(...) in the reference implementation.  
+
+### use_function_argc 4
+
+This tells the handler how many additional arguments to pass to the plugin (in addition to mpi rank, and location information, which are passed automatically). 
+
+### use_function_argv 1 1 1 1 
+
+Specify the values of these additional arguments. For flexibility, these values are passed as string arguments, analogously to the C standard. However, unlike the C standard argv[], user arguments are numbered beginning from zero. 
+
 ---
 
 ## INTERPRETING OUTPUTS

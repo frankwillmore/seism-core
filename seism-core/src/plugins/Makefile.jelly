@@ -1,0 +1,20 @@
+#PHDF5_HOME=/mnt/wrk/Frank.Willmore/usr/local/phdf5/1.9.236
+
+CC=h5pcc
+
+libplugins.so: gaussian.o mpi_rank_fill.o
+	gcc -shared gaussian.o mpi_rank_fill.o -o libplugins.so 
+
+gaussian.o: gaussian.c
+	$(CC) -fPIC -c gaussian.c -std=c99 
+	#-L$(PHDF5_HOME)/lib -lhdf5 -I$(PHDF5_HOME)/include
+
+mpi_rank_fill.o: mpi_rank_fill.c
+	$(CC) -fPIC -c mpi_rank_fill.c -std=c99 
+
+clean:
+	rm -rf *.so *.o a.out
+
+
+
+
