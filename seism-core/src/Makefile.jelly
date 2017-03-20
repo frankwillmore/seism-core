@@ -18,6 +18,14 @@ check-slice: seism-core-slice seism-core-check
 	./seism-core-check seism-test.h5
 	rm seism-test.h5
 
+check-plugin: seism-core-slice seism-core-check seism-core-plugin
+	mpiexec -n 8 ./seism-core-slice < ../tests/check-plugin.in
+	./seism-core-check seism-test.h5
+	rm seism-test.h5
+
+seism-core-plugin: plugins/libplugins.so 
+	cd plugins && make 
+
 seism-core.o: seism-core.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 

@@ -7,9 +7,9 @@ class seismCoreAttributes
     public:
 
         char *name;
-        unsigned int processor_dims[3];
-        unsigned int chunk_dims[3];
-        unsigned int domain_dims[3];
+        hsize_t processor_dims[3];
+        hsize_t chunk_dims[3];
+        hsize_t domain_dims[3];
         unsigned int simulation_time;
         int collective_write;
         int precreate;
@@ -20,9 +20,9 @@ class seismCoreAttributes
         seismCoreAttributes
         (
             char * _name,
-            unsigned int *_processor_dims,
-            unsigned int *_chunk_dims,
-            unsigned int *_domain_dims,
+            hsize_t *_processor_dims,
+            hsize_t *_chunk_dims,
+            hsize_t *_domain_dims,
             unsigned int _simulation_time,
             int _collective_write,
             int _precreate,

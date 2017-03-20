@@ -12,7 +12,7 @@ void seismCoreAttributes::init()
     vls_type_c_id = H5Tcopy(H5T_C_S1);
     H5Tset_size(vls_type_c_id, H5T_VARIABLE);
     hsize_t adims[] = {3};
-    dim_h5t = H5Tarray_create(H5T_NATIVE_UINT, 1, adims);
+    dim_h5t = H5Tarray_create(H5T_NATIVE_ULLONG, 1, adims);
     
     attributes_h5t = H5Tcreate(H5T_COMPOUND, sizeof(seismCoreAttributes)); 
     H5Tinsert(attributes_h5t, "name", HOFFSET(seismCoreAttributes, name), 
@@ -71,9 +71,9 @@ void seismCoreAttributes::writeAttributesToFile(hid_t file_id)
 seismCoreAttributes::seismCoreAttributes
 (
     char * _name,
-    unsigned int *_processor_dims,
-    unsigned int *_chunk_dims,
-    unsigned int *_domain_dims,
+    hsize_t *_processor_dims,
+    hsize_t *_chunk_dims,
+    hsize_t *_domain_dims,
     unsigned int _simulation_time,
     int _collective_write,
     int _precreate,

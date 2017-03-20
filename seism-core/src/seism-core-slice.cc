@@ -111,7 +111,8 @@ int main(int argc, char** argv)
 
     // rank 0 reads the input file, then broadcasts
     string parameter, rest_of_line;
-    unsigned int simulation_time, processor[3], chunk[3], domain[3];
+    unsigned int simulation_time;
+    hsize_t processor[3], chunk[3], domain[3];
     int collective_write = 0;
     int precreate = 0;
     int set_collective_metadata = 0;
@@ -119,6 +120,7 @@ int main(int argc, char** argv)
     int deflate = 0;
     char use_function_lib[256];
     char use_function_name[256];
+    use_function_name[0] = 0; // if no param passed, then strcmp test will fail
     int use_function_argc = 0;
     string use_function_argv_string;
     char use_function_argv[256];
@@ -158,23 +160,23 @@ int main(int argc, char** argv)
               cin >> use_function_argc;
             if (!parameter.compare("use_function_argv"))
             {
-              //cin >> use_function_argv;
-              getline(cin, use_function_argv_string); // read the rest of the line
-              cout << use_function_argv_string << endl;
-              use_function_argv_c_str = use_function_argv_string.c_str(); 
-              strcpy(use_function_argv, use_function_argv_c_str);
-              continue;
+                // read the rest of the line
+                getline(cin, use_function_argv_string);
+                // extract a C-string to pass via MPI
+                use_function_argv_c_str = use_function_argv_string.c_str(); 
+                strcpy(use_function_argv, use_function_argv_c_str);
+                continue;
             }
             getline(cin, rest_of_line); // read the rest of the line
         }
     }
 
-    assert(MPI_Bcast(&simulation_time, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+    assert(MPI_Bcast(&simulation_time, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD) ==
            MPI_SUCCESS);
-    assert(MPI_Bcast(&processor, 3, MPI_INT, 0, MPI_COMM_WORLD) ==
+    assert(MPI_Bcast(&processor, 3, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD) ==
            MPI_SUCCESS);
-    assert(MPI_Bcast(&chunk, 3, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
-    assert(MPI_Bcast(&domain, 3, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
+    assert(MPI_Bcast(&chunk, 3, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
+    assert(MPI_Bcast(&domain, 3, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&collective_write, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
            MPI_SUCCESS);
     assert(MPI_Bcast(&precreate, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
@@ -189,8 +191,6 @@ int main(int argc, char** argv)
     assert(MPI_Bcast(&use_function_name, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_argc, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_argv, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
-
-    cout << "got " << use_function_argv << endl;
 
     // check the arguments
     assert(time > 0);
@@ -261,6 +261,10 @@ int main(int argc, char** argv)
     start[2] = (hsize_t) ((mpi_rank - start[3])/processor[2]) % processor[1];
     start[1] = (hsize_t) ((mpi_rank - start[3])/processor[2] - start[2]) /
       processor[1];
+    hsize_t domain_block_number[3];
+    domain_block_number[0] = start[1];
+    domain_block_number[1] = start[2];
+    domain_block_number[2] = start[3];
     start[1] *= domain[0];
     start[2] *= domain[1];
     start[3] *= domain[2];
@@ -299,12 +303,9 @@ int main(int argc, char** argv)
 
     if (strcmp(use_function_name, "") != 0) {
 
-cout << "using function " << use_function_name << endl;
-cout << "argc = " << use_function_argc;
-cout << "argv = " << use_function_argv;
         void *handle;
         // This awkward cast provided to you by the ISO standards team...
-        float (*use_function)(int, int, char **);
+        float (*use_function)(int, hsize_t*, hsize_t*, hsize_t*, hsize_t*, int, char **);
         char *error;
 
         handle = dlopen (use_function_lib, RTLD_LAZY);
@@ -319,17 +320,22 @@ cout << "argv = " << use_function_argv;
             exit(1);
         }
 
-        // split the argv string
-        // const char **use_function_argv_array = (const char**)(sizeof(char*) * argc);;
-        // std::istringstream iss(string(use_function_argv));
-        // std::string token;
-        // for(int i=0; i<use_function_argc; i++) {
-        //     iss >> token;
-        //     use_function_argv_array[i] = token.c_str();
-        // }
+        // split use_function_argv into tokens, then pass to library function
+        
+        const char *array[16];
+        for (int i = 0; i < use_function_argc; i++) {
+            if (i == 0) array[i] = strtok(use_function_argv, " ");
+            else array[i] = strtok(NULL, " ");
+        }   
 
-        for (unsigned index = 0; index < domain[0] * domain[1] * domain[2]; index++) {
-            v[index] = (*use_function)(mpi_rank, use_function_argc, (char **)use_function_argv);
+        //for (unsigned index = 0; index < domain[0] * domain[1] * domain[2]; index++) {
+        hsize_t position_in_block[3];
+        for (position_in_block[0] = 0; position_in_block[0] < domain[0]; position_in_block[0]++)
+        for (position_in_block[1] = 0; position_in_block[1] < domain[1]; position_in_block[1]++)
+        for (position_in_block[2] = 0; position_in_block[2] < domain[2]; position_in_block[2]++)
+        {
+            hsize_t index = position_in_block[0] * domain[1] * domain[2] + position_in_block[1] * domain[2] + position_in_block[2];
+            v[index] = (*use_function)(mpi_rank, processor, domain, domain_block_number, position_in_block, use_function_argc, (char **)array);
         }
 
         dlclose(handle);
