@@ -494,7 +494,8 @@ int main(int argc, char** argv)
         assert (file >= 0);
         seismCoreAttributes attr((char*)"my_attr", processor, chunk, domain, 
                 simulation_time, collective_write, precreate, 
-                set_collective_metadata, never_fill);
+                set_collective_metadata, never_fill, use_function_lib,
+                use_function_name);
         attr.writeAttributesToFile(file);
         assert(H5Fclose(file) >=0);
     }

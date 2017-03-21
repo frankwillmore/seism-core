@@ -15,6 +15,8 @@ class seismCoreAttributes
         int precreate;
         int set_collective_metadata;
         int never_fill;
+        char *use_function_lib;
+        char *use_function_name;
 
         // constructor to create a new attributes object from simulation
         seismCoreAttributes
@@ -27,7 +29,9 @@ class seismCoreAttributes
             int _collective_write,
             int _precreate,
             int _set_collective_metadata,
-            int _never_fill
+            int _never_fill,
+            char *_use_function_lib,
+            char *_use_function_name 
         );
 
         // constructor to read attributes object from a file
