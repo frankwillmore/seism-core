@@ -11,6 +11,8 @@ void seismCoreAttributes::init()
     // create the inner array and character types
     vls_t = H5Tcopy(H5T_C_S1);
     H5Tset_size(vls_t, H5T_VARIABLE);
+//    fls_t = H5Tcopy(H5T_C_S1);
+//    H5Tset_size(fls_t, 256); // fixed length for use_function_argv
     hsize_t adims[] = {3};
     dim3_t = H5Tarray_create(H5T_NATIVE_ULLONG, 1, adims);
     
@@ -37,6 +39,10 @@ void seismCoreAttributes::init()
               use_function_lib), vls_t);
     H5Tinsert(attributes_t, "use_function_name", HOFFSET(seismCoreAttributes, 
               use_function_name), vls_t);
+    H5Tinsert(attributes_t, "use_function_argc", HOFFSET(seismCoreAttributes,
+              use_function_argc), H5T_NATIVE_INT);
+    H5Tinsert(attributes_t, "use_function_argv", HOFFSET(seismCoreAttributes, 
+              use_function_argv), vls_t);
 }
 
 // the object has been created and initialized before calling this 
@@ -76,7 +82,9 @@ seismCoreAttributes::seismCoreAttributes
     int _set_collective_metadata,
     int _never_fill,
     char* _use_function_lib,
-    char* _use_function_name 
+    char* _use_function_name,
+    int _use_function_argc,
+    char* _use_function_argv 
 )   
 {
     name = _name;
@@ -96,6 +104,8 @@ seismCoreAttributes::seismCoreAttributes
     never_fill = _never_fill;
     use_function_lib = _use_function_lib;
     use_function_name = _use_function_name;
+    use_function_argc = _use_function_argc;
+    use_function_argv = _use_function_argv;
 
     init();
 }
@@ -109,9 +119,10 @@ seismCoreAttributes::seismCoreAttributes(hid_t file_id)
     // before overwriting with values from file
     hid_t _attributes_t = attributes_t;
     hid_t _vls_t = vls_t;
+//    hid_t _fls_t = fls_t;
     hid_t _dim3_t = dim3_t;
 
-    // open the attribute, and read info into a buffer
+    // open the attribute, and read info into 'this'
     hid_t aapl_id = H5P_DEFAULT;
     hid_t lapl_id = H5P_DEFAULT;
     hid_t attr_id = H5Aopen_by_name( file_id, "/", "simulation_attributes", 
@@ -122,6 +133,7 @@ seismCoreAttributes::seismCoreAttributes(hid_t file_id)
     // pop the stashed values
     attributes_t = _attributes_t;
     vls_t = _vls_t;
+//    fls_t = _fls_t;
     dim3_t = _dim3_t;
 
     H5Aclose(attr_id);
@@ -132,6 +144,7 @@ seismCoreAttributes::~seismCoreAttributes()
     // close resources 
     H5Tclose(attributes_t);
     H5Tclose(vls_t); 
+//    H5Tclose(fls_t); 
     H5Tclose(dim3_t); 
 }
  

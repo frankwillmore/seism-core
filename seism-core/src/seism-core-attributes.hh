@@ -17,6 +17,8 @@ class seismCoreAttributes
         int never_fill;
         char* use_function_lib;
         char* use_function_name;
+        int use_function_argc;
+        char* use_function_argv;
 
         // constructor to create a new attributes object from simulation
         seismCoreAttributes
@@ -31,7 +33,9 @@ class seismCoreAttributes
             int _set_collective_metadata,
             int _never_fill,
             char* _use_function_lib,
-            char* _use_function_name 
+            char* _use_function_name,
+            int _use_function_argc,
+            char* _use_function_argv
         );
 
         // constructor to read attributes object from a file
@@ -43,6 +47,7 @@ class seismCoreAttributes
         // destructor will free H5 resources
         ~seismCoreAttributes();
 
+//        hid_t fls_t; // compound type
         hid_t vls_t; // compound type
         hid_t dim3_t; // dimension type
         hid_t attributes_t; // attributes type
