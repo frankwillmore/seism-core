@@ -24,33 +24,33 @@
  * OUT: float value from the reference data file
  */
 
-static bool lib_initialized = false;
+static bool sd_initialized = false;
 static float *buffer;
 
-static void initialize_lib(char* filename){
+static void initialize_sd(char* filename){
 
     FILE *fileptr;
-//    char *buffer;
     long filelen;
-    printf("opening %s\n", filename);
 
-    //fileptr = fopen("myfile.txt", "rb");  // Open the file in binary mode
     fileptr = fopen(filename, "rb");      // Open the file in binary mode
     fseek(fileptr, 0, SEEK_END);          // Jump to the end of the file
     filelen = ftell(fileptr);             // Get the current byte offset in the file
     rewind(fileptr);                      // Jump back to the beginning of the file
 
-    //buffer = (char *)malloc((filelen+1)*sizeof(char)); // Enough memory for file + \0
-    buffer = (float *)malloc((filelen));  // Enough memory for file + \0
+    buffer = (float *)malloc((filelen));  // Enough memory for file 
     fread(buffer, filelen, 1, fileptr);   // Read in the entire file
     fclose(fileptr);                      // Close the file
 
-    lib_initialized = true;
+    sd_initialized = true;
+}
+
+static void close_sd(){
+    free(buffer);
 }
 
 float sd(int mpi_rank, hsize_t* system_size, hsize_t* domain_block_size, hsize_t* domain_block_number, hsize_t* position_in_block, int argc, char **argv){
 
-    if (!lib_initialized) initialize_lib(argv[0]);
+    if (!sd_initialized) initialize_sd(argv[0]);
 
     // map position_in_block and domain_block_size to a position in the data array.
     unsigned position = position_in_block[2] * domain_block_size[1] * domain_block_size[0]

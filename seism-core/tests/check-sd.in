@@ -11,6 +11,6 @@ deflate 5
 use_function_lib libplugins.so
 use_function_name sd
 use_function_argc 1
-use_function_argv /mnt/wrk/Frank.Willmore/performance/seism-core/src/plugins/sd/xaa
+use_function_argv /mnt/wrk/Frank.Willmore/performance/seism-core/src/plugins/sd/xyz
 DONE
 
