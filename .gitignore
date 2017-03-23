@@ -4,7 +4,10 @@ seism-core-test
 seism-core-check
 seism-core-check-static
 *.o
+*.so
 *.h5
 Makefile
 results/*
+seism-core/src/plugins/sd/VX
+seism-core/src/plugins/sd/x*
 

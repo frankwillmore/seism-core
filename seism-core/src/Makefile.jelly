@@ -23,6 +23,11 @@ check-plugin: seism-core-slice seism-core-check seism-core-plugin
 	./seism-core-check seism-test.h5
 	rm seism-test.h5
 
+check-sd: seism-core-slice seism-core-check seism-core-plugin
+	mpiexec -n 8 ./seism-core-slice < ../tests/check-sd.in
+	#./seism-core-check seism-test.h5
+	#rm seism-test.h5
+
 seism-core-plugin: plugins/libplugins.so 
 	cd plugins && make 
 
