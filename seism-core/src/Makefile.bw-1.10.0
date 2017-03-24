@@ -11,7 +11,7 @@ default:
 	@printf "\033[31;01m' *** See instructions in Makefile, for prerequisites on building with 1.10.0 with two versions ***\033[0m\n"
 
 seism-core-slice: seism-core-slice.o seism-core-attributes.o 
-	$(CXX) $(CXXFLAGS) -lstdc++ -lhdf5 seism-core-attributes.o seism-core-slice.o -o seism-core-slice
+	$(CXX) $(CXXFLAGS) -ldl -lsz -lstdc++ -lhdf5 seism-core-attributes.o seism-core-slice.o -o seism-core-slice
 
 seism-core-slice.o: seism-core-slice.cc 
 	$(CXX) $(CXXFLAGS) -c seism-core-slice.cc -o seism-core-slice.o
@@ -31,6 +31,22 @@ check-slice: seism-core-slice seism-core-check
 	@printf "\033[31;01m *** removing test file ***\033[0m\n\n"
 	rm seism-test.h5
 	@printf "\033[31;01m *** done ***\033[0m\n\n"
+
+
+check-plugin: seism-core-slice seism-core-check seism-core-plugin
+	#mpiexec -n 8 ./seism-core-slice < ../tests/check-plugin.in
+	aprun -N 8 -n 8 ./seism-core-slice < ../tests/check-plugin.in.bw
+	./seism-core-check seism-test.h5
+	rm seism-test.h5
+
+check-sd: seism-core-slice seism-core-check seism-core-plugin
+	#mpiexec -n 8 ./seism-core-slice < ../tests/check-sd.in
+	aprun -N 8 -n 8 ./seism-core-slice < ../tests/check-sd.in.bw
+	#./seism-core-check seism-test.h5
+	#rm seism-test.h5
+
+seism-core-plugin: plugins/libplugins.so 
+	cd plugins && make 
 
 clean:
 	rm -f *.o *.h5

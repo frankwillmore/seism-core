@@ -1,0 +1,20 @@
+CC=h5pcc
+
+libplugins.so: gaussian.o mpi_rank_fill.o sd.o
+	gcc -shared gaussian.o mpi_rank_fill.o sd.o -o libplugins.so 
+
+gaussian.o: gaussian.c
+	$(CC) -fPIC -c gaussian.c 
+
+mpi_rank_fill.o: mpi_rank_fill.c
+	$(CC) -fPIC -c mpi_rank_fill.c
+
+sd.o: sd/sd.c
+	$(CC) -fPIC -c sd/sd.c 
+
+clean:
+	rm -rf *.so *.o a.out
+
+
+
+

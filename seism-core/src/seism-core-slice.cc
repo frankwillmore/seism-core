@@ -28,6 +28,7 @@
 
 #include "hdf5.h"
 
+#include <cstdlib>
 #include <cassert>
 #include <iostream>
 #include <string>

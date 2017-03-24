@@ -1,0 +1,16 @@
+# default test set
+processor 2 2 2
+chunk 10560 5 100
+domain 10560 5 100
+time 1
+precreate
+collective_write
+set_collective_metadata
+never_fill
+deflate 5
+use_function_lib libplugins.so
+use_function_name sd
+use_function_argc 1
+use_function_argv /u/sciteam/willmore/performance/seism-core/src/plugins/sd/xyz
+DONE
+

@@ -1,0 +1,17 @@
+# default test set
+processor 2 2 2
+chunk 180 128 128
+domain 360 128 128
+time 5
+precreate
+collective_write
+set_collective_metadata
+never_fill
+deflate 5
+use_function_lib libplugins.so
+#use_function_name mpi_rank_fill
+use_function_name gaussian
+use_function_argc 4
+use_function_argv 1 1 1 1 
+DONE
+
