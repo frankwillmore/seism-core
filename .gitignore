@@ -10,4 +10,4 @@ Makefile
 results/*
 seism-core/src/plugins/sd/VX
 seism-core/src/plugins/sd/x*
-
+core
