@@ -126,8 +126,8 @@ int main(int argc, char** argv)
     int use_function_argc = 0;
     string use_function_argv_string;
     char use_function_argv[256];
-    const char *use_function_argv_c_str;
 	int zfp = 0;
+    const char *use_function_argv_c_str = NULL;
 
     if (mpi_rank==0)
     {
@@ -517,9 +517,12 @@ int main(int argc, char** argv)
         // re-open the file and write the simulation attributes
         file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
         assert (file >= 0);
+        char* argv_junk = (char*)use_function_argv_c_str;
         seismCoreAttributes attr((char*)"my_attr", processor, chunk, domain, 
                 simulation_time, collective_write, precreate, 
-                set_collective_metadata, never_fill, deflate, zfp);
+                set_collective_metadata, never_fill, deflate, zfp,
+                use_function_lib, use_function_name, use_function_argc, 
+                argv_junk );
         attr.writeAttributesToFile(file);
         assert(H5Fclose(file) >=0);
     }
