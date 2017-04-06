@@ -28,6 +28,7 @@
 
 #include "hdf5.h"
 
+#include <H5Zzfp.h>
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -71,6 +72,9 @@ int main(int argc, char** argv)
     cout << attr.domain_dims[1] << ":";
     cout << attr.domain_dims[2] << endl;
     cout << endl;
+
+	int zfp = 1;
+    if (zfp != 0) assert(H5Z_zfp_initialize() >= 0);
 
     // open the dataset
     hid_t dset = H5Dopen (file, CHUNKED_DSET_NAME, H5P_DEFAULT);
@@ -189,5 +193,7 @@ int main(int argc, char** argv)
 
     H5Dclose(dset);
     H5Fclose(file);
+
+    if (zfp != 0) assert(H5Z_zfp_finalize() >= 0);
 }
 

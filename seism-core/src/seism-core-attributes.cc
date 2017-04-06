@@ -33,6 +33,10 @@ void seismCoreAttributes::init()
               seismCoreAttributes, set_collective_metadata), H5T_NATIVE_INT);
     H5Tinsert(attributes_h5t, "never_fill", HOFFSET(seismCoreAttributes, 
               never_fill), H5T_NATIVE_INT);
+    H5Tinsert(attributes_h5t, "deflate", HOFFSET(seismCoreAttributes, 
+              deflate), H5T_NATIVE_INT);
+    H5Tinsert(attributes_h5t, "zfp", HOFFSET(seismCoreAttributes, 
+              zfp), H5T_NATIVE_INT);
 
     // data types that are in the class... 
     // H5Tinsert(attributes_h5t, "vls_type_c_id", 
@@ -78,7 +82,9 @@ seismCoreAttributes::seismCoreAttributes
     int _collective_write,
     int _precreate,
     int _set_collective_metadata,
-    int _never_fill
+    int _never_fill,
+    int _deflate,
+    int _zfp
 )   
 {
     name = _name;
@@ -96,6 +102,8 @@ seismCoreAttributes::seismCoreAttributes
     precreate = _precreate;
     set_collective_metadata = _set_collective_metadata;
     never_fill = _never_fill;
+    deflate = _deflate;
+    zfp = _zfp;
 
     init();
 }
