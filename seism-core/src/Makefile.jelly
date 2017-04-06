@@ -16,6 +16,7 @@ seism-core-slice: seism-core-slice.o seism-core-attributes.o
 check-slice: seism-core-slice seism-core-check
 	mpiexec -n 8 ./seism-core-slice < ../tests/check.in
 	./seism-core-check seism-test.h5
+	ls -l seism-test.h5
 	rm seism-test.h5
 
 check-plugin: seism-core-slice seism-core-check seism-core-plugin
@@ -25,8 +26,9 @@ check-plugin: seism-core-slice seism-core-check seism-core-plugin
 
 check-sd: seism-core-slice seism-core-check seism-core-plugin
 	mpiexec -n 8 ./seism-core-slice < ../tests/check-sd.in
+	ls -l seism-test.h5
 	#./seism-core-check seism-test.h5
-	#rm seism-test.h5
+	rm seism-test.h5
 
 seism-core-plugin: plugins/libplugins.so 
 	cd plugins && make 
