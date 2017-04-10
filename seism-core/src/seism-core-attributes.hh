@@ -42,6 +42,8 @@ class seismCoreAttributes
             char* _use_function_argv
         );
 
+        void finalize(); // dispose of H5 objects used internally
+
         // constructor to read attributes object from a file
         seismCoreAttributes(hid_t file_id);
 
@@ -59,6 +61,8 @@ class seismCoreAttributes
     private:
 
         void init(); // create H5 objects used internally
+
+        bool is_finalized = false;
 
 };
 

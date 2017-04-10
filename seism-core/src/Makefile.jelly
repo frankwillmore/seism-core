@@ -17,8 +17,14 @@ check-slice: seism-core-slice seism-core-check
 	ls -l seism-test.h5
 	rm seism-test.h5
 
-check-subfile: seism-core-slice # seism-core-check
+check-subfile: seism-core-slice 
 	mpiexec -n 8 ./seism-core-slice < ../tests/subfile.in
+
+check-read: seism-read
+	mpiexec -n 8 ./seism-read seism-test.h5
+
+seism-read: seism-read.o seism-core-attributes.o 
+	$(CXX) $(CXXFLAGS) seism-core-attributes.o seism-read.o -o $@ -lstdc++ 
 
 check-plugin: seism-core-slice seism-core-check seism-core-plugin
 	mpiexec -n 8 ./seism-core-slice < ../tests/check-plugin.in
@@ -37,6 +43,9 @@ seism-core-plugin: plugins/libplugins.so
 seism-core.o: seism-core.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+seism-read.o: seism-read.cc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
 seism-core-slice.o: seism-core-slice.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
@@ -53,5 +62,6 @@ clean:
 	rm -f *.o *.h5
 
 veryclean: clean
-	rm -f seism-core seism-core-slice seism-core-slicexx seism-core-check
+	rm -f seism-core seism-core-slice seism-core-check seism-read 
+
 

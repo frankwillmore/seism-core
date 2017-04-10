@@ -157,10 +157,15 @@ seismCoreAttributes::seismCoreAttributes(hid_t file_id)
 
 seismCoreAttributes::~seismCoreAttributes()
 {
+    if (!is_finalized) finalize();
+}
+
+void seismCoreAttributes::finalize(){
     // close resources 
-    H5Tclose(attributes_t);
-    H5Tclose(vls_t); 
+    assert(H5Tclose(attributes_t) >= 0);
+    assert(H5Tclose(vls_t) >= 0); 
 //    H5Tclose(fls_t); 
-    H5Tclose(dim3_t); 
+    assert(H5Tclose(dim3_t) >= 0); 
+    is_finalized = true;
 }
  
