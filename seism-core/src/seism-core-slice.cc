@@ -71,8 +71,8 @@ void precreate_0
 {
     hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
     assert(fapl >= 0);
-    assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
-           0);
+//    assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
+//           0);
 
     hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
     assert(file >= 0);
@@ -120,12 +120,15 @@ int main(int argc, char** argv)
     int set_collective_metadata = 0;
     int never_fill = 0;
     int deflate = 0;
+    int subfile = 0;
     char use_function_lib[256];
+    use_function_lib[0] = 0; // truncate any junk string in auto var
     char use_function_name[256];
     use_function_name[0] = 0; // if no param passed, then strcmp test will fail
     int use_function_argc = 0;
     string use_function_argv_string;
     char use_function_argv[256];
+    use_function_argv[0] = 0; // truncate any junk string in auto var
 	int zfp = 0;
     const char *use_function_argv_c_str = NULL;
 
@@ -155,6 +158,8 @@ int main(int argc, char** argv)
               never_fill = true;
             if (!parameter.compare("deflate"))
               cin >> deflate;
+            if (!parameter.compare("subfile"))
+              cin >> subfile;
             if (!parameter.compare("use_function_lib"))
               cin >> use_function_lib;
             if (!parameter.compare("use_function_name"))
@@ -192,6 +197,8 @@ int main(int argc, char** argv)
            MPI_SUCCESS);
     assert(MPI_Bcast(&deflate, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
            MPI_SUCCESS);
+    assert(MPI_Bcast(&subfile, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+           MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_lib, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_name, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_argc, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
@@ -225,6 +232,7 @@ int main(int argc, char** argv)
             << endl;
         cout << "H5D_FILL_TIME_NEVER set:\t" << never_fill << endl;
         cout << "Deflate: \t\t\t" << deflate << endl;
+        cout << "Subfile: \t\t\t" << subfile << endl;
         cout << "ZFP: \t\t\t\t" << zfp << endl;
         cout << endl;
     }
@@ -270,7 +278,7 @@ int main(int argc, char** argv)
     hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
     assert(dapl >= 0);
     ///////////////////////////////////////////////////////////////////////////
-    // prepare hyperslab selection, use max dims, can ignore 4th as needed
+    // prepare hyperslab selection
     hsize_t start[4], block[4], count[4] = {1,1,1,1};
 
     // calculate offsets from MPI rank
@@ -322,7 +330,8 @@ int main(int argc, char** argv)
 
         void *handle;
         // This awkward cast provided to you by the ISO standards team...
-        float (*use_function)(int, hsize_t*, hsize_t*, hsize_t*, hsize_t*, int, char **);
+        float (*use_function)(int, hsize_t*, hsize_t*, hsize_t*, hsize_t*, int,
+                char **);
         char *error;
 
         handle = dlopen (use_function_lib, RTLD_LAZY);
@@ -345,7 +354,6 @@ int main(int argc, char** argv)
             else array[i] = strtok(NULL, " ");
         }   
 
-        //for (unsigned index = 0; index < domain[0] * domain[1] * domain[2]; index++) {
         hsize_t position_in_block[3];
         for (position_in_block[0] = 0; position_in_block[0] < domain[0]; position_in_block[0]++)
         for (position_in_block[1] = 0; position_in_block[1] < domain[1]; position_in_block[1]++)
@@ -382,7 +390,25 @@ int main(int argc, char** argv)
     {
         info = MPI_INFO_NULL;
     }
-    assert(H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, info) >= 0);
+
+    MPI_Comm comm = MPI_COMM_WORLD;
+    assert(H5Pset_fapl_mpio(fapl, comm, info) >= 0);
+
+    char subfile_name[256];
+    if (subfile) 
+    {
+        // split by color
+        int color = mpi_rank % subfile;
+        MPI_Comm_split (MPI_COMM_WORLD, color, mpi_rank, &comm);
+        sprintf(subfile_name, "Subfile_%d.h5", color);
+        assert(H5Pset_subfiling_access(fapl, subfile_name, comm, MPI_INFO_NULL) >= 0); 
+        
+        // select hyperslab for subfiling, superset of selection for writing.
+        hsize_t subfiling_block[] = {simulation_time, domain[0], domain[1], domain[2]};
+        hsize_t subfiling_start[] = {0, start[1], start[2], start[3]};
+        assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, subfiling_start, NULL, count, subfiling_block) >= 0);
+        assert (H5Pset_subfiling_selection(dapl, fspace) >= 0); 
+    }
 
     // file handle and name for file which will be created
     string fname = "seism-test.h5";
@@ -421,6 +447,11 @@ int main(int argc, char** argv)
         assert(dset_chunked >= 0);
     }
 
+//H5Dclose(dset_chunked);
+//H5Fclose(file);
+//MPI_Finalize();
+//exit(0);
+
     MPI_Barrier(MPI_COMM_WORLD);
     double stop_create = MPI_Wtime();
 
@@ -433,6 +464,7 @@ int main(int argc, char** argv)
     for (size_t it = 0; it < simulation_time; ++it)
     {
         start[0] = (hsize_t) it;
+//cout << *start << ", " << *count << ", " << *block << endl;
         assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, count,
                                    block) >= 0);
         assert(H5Dwrite(dset_chunked, H5T_NATIVE_FLOAT, mspace, fspace, dxpl,

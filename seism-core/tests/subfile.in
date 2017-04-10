@@ -1,14 +1,14 @@
 # default test set
 processor 2 2 2
-chunk 180 128 128
-domain 360 128 128
-time 5
+chunk 256 256 256
+domain 256 256 256
+time 1
 #precreate
 #collective_write
 #set_collective_metadata
 #never_fill
 #deflate 5
 #zfp 1 
-subfile 8
+#subfile 8
 DONE
 
