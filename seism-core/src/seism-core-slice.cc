@@ -29,7 +29,9 @@
 #include "hdf5.h"
 
 #include <cstdlib>
+#ifdef INCLUDE_ZFP
 #include <H5Zzfp.h>
+#endif
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -269,11 +271,13 @@ int main(int argc, char** argv)
 	// ZFP
 	size_t cd_nelmts = 4;
 	unsigned int cd_values[] = {3, 0, 0, 0};
+#ifdef INCLUDE_ZFP
     if (zfp != 0) 
 	{
 		assert(H5Z_zfp_initialize() >= 0);
 		assert(H5Pset_filter(dcpl, H5Z_FILTER_ZFP, H5Z_FLAG_MANDATORY,cd_nelmts, cd_values) >= 0);
 	}
+#endif
 
     hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
     assert(dapl >= 0);
@@ -486,7 +490,9 @@ int main(int argc, char** argv)
     assert(H5Sclose(fspace) >= 0);
     assert(H5Pclose(dcpl) >= 0);
 
+#ifdef INCLUDE_ZFP
     if (zfp != 0) assert(H5Z_zfp_finalize() >= 0);
+#endif
 
     // verify that metadata ops actually performed collectively
     hbool_t actual_metadata_ops_collective;
