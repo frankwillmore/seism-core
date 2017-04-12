@@ -8,6 +8,9 @@ using namespace std;
 
 void seismCoreAttributes::init()
 {
+    // lifecycle management
+    is_finalized = false;
+
     // create the inner array and character types
     vls_t = H5Tcopy(H5T_C_S1);
     H5Tset_size(vls_t, H5T_VARIABLE);

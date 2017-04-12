@@ -62,7 +62,7 @@ class seismCoreAttributes
 
         void init(); // create H5 objects used internally
 
-        bool is_finalized = false;
+        bool is_finalized;
 
 };
 
