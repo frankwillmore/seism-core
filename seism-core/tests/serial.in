@@ -1,0 +1,13 @@
+# default test set
+processor 1 1 1
+chunk 180 128 128
+domain 360 128 128
+time 5
+#precreate
+#collective_write
+#set_collective_metadata
+#never_fill
+#deflate 5
+#zfp 1 
+DONE
+

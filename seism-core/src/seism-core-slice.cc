@@ -209,7 +209,8 @@ int main(int argc, char** argv)
     // check the arguments
     assert(time > 0);
     assert(processor[0]*processor[1]*processor[2] == (hsize_t) mpi_size);
-    assert(processor[0] > 1 && processor[1] > 1 && processor[2] > 1);
+    // I'm removing the below restriction to allow for serial case
+    // assert(processor[0] > 1 && processor[1] > 1 && processor[2] > 1);
     assert(chunk[0] > 1 && chunk[1] > 1 && chunk[2] > 1);
     assert(domain[0] > 1 && domain[1] > 1 && domain[2] > 1);
 
