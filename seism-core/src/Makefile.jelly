@@ -17,6 +17,12 @@ check-slice: seism-core-slice seism-core-check
 	ls -l seism-test.h5
 	rm seism-test.h5
 
+check-serial: seism-core-slice seism-core-check
+	./seism-core-slice < ../tests/serial.in
+	./seism-core-check seism-test.h5
+	ls -l seism-test.h5
+	rm seism-test.h5
+
 check-plugin: seism-core-slice seism-core-check seism-core-plugin
 	mpiexec -n 8 ./seism-core-slice < ../tests/check-plugin.in
 	./seism-core-check seism-test.h5
