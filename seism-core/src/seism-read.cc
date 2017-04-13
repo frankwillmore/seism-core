@@ -54,10 +54,11 @@ int main(int argc, char** argv)
         cout << attr.processor_dims[0] << ":";
         cout << attr.processor_dims[1] << ":";
         cout << attr.processor_dims[2] << endl;
-        cout << "chunk dims:\t\t\t";
-        cout << attr.chunk_dims[0] << ":";
-        cout << attr.chunk_dims[1] << ":";
-        cout << attr.chunk_dims[2] << endl;
+// There are no chunks in subfiling
+//        cout << "chunk dims:\t\t\t";
+//        cout << attr.chunk_dims[0] << ":";
+//        cout << attr.chunk_dims[1] << ":";
+//        cout << attr.chunk_dims[2] << endl;
         cout << "domain dims:\t\t\t";
         cout << attr.domain_dims[0] << ":";
         cout << attr.domain_dims[1] << ":";

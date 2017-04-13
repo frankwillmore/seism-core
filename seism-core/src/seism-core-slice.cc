@@ -213,7 +213,9 @@ int main(int argc, char** argv)
     assert(processor[0]*processor[1]*processor[2] == (hsize_t) mpi_size);
     // I'm removing the below restriction to allow for serial case
     // assert(processor[0] > 1 && processor[1] > 1 && processor[2] > 1);
-    assert(chunk[0] > 1 && chunk[1] > 1 && chunk[2] > 1);
+
+    // Subfiling and chunking not compatible, so ignore chunk info
+    if (!subfile) assert(chunk[0] > 1 && chunk[1] > 1 && chunk[2] > 1);
     assert(domain[0] > 1 && domain[1] > 1 && domain[2] > 1);
 
     if (mpi_rank == 0)
@@ -223,11 +225,11 @@ int main(int argc, char** argv)
         << endl;
         cout << "Number of processes:\t\t" << mpi_size << endl;
         cout << "Process layout:\t\t\t" << processor[0] << " x " <<
-          processor[1] << " x " << processor[2] << endl;
+            processor[1] << " x " << processor[2] << endl;
         cout << "Per process grid:\t\t" << domain[0] << " x " << domain[1] <<
-          " x " << domain[2] << endl;
-        cout << "Chunk dimensions:\t\t" << chunk[0] << " x " << chunk[1] <<
-          " x " << chunk[2] << endl;
+            " x " << domain[2] << endl;
+        if (!subfile) cout << "Chunk dimensions:\t\t" << chunk[0] << " x " 
+            << chunk[1] << " x " << chunk[2] << endl;
         cout << "Number of time steps:\t\t" << simulation_time << endl;
         cout << "Pre-create:\t\t\t" << precreate << endl;
         cout << "Collective I/O:\t\t\t" << collective_write << endl;
@@ -264,7 +266,8 @@ int main(int argc, char** argv)
     // create dcpl and set properties
     hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
     assert(dcpl >= 0);
-    assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
+    // subfiling not compatible with chunking
+    if (!subfile) assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
     if (never_fill) assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
     assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
     if (deflate != 0) assert(H5Pset_deflate (dcpl, deflate) >= 0);
@@ -474,9 +477,9 @@ int main(int argc, char** argv)
     double stop_chunked = MPI_Wtime();
 
     ///////////////////////////////////////////////////////////////////////////
-	
-	// get storage size before closing dataset
-	hsize_t storage_size = H5Dget_storage_size(dset_chunked);
+
+    // get storage size before closing dataset
+    hsize_t storage_size = H5Dget_storage_size(dset_chunked);
 
     assert(H5Dclose(dset_chunked) >= 0);
     assert(H5Pclose(fapl) >= 0);
