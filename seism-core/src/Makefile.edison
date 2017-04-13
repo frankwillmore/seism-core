@@ -56,6 +56,9 @@ check-sd: seism-core-slice seism-core-check seism-core-plugin
 check-subfile: seism-core-slice 
 	mpiexec -n 8 ./seism-core-slice < ../tests/subfile.in
 
+check-serial: seism-core-slice
+	./seism-core-slice < ../tests/serial.in
+
 check-read: seism-read
 	mpiexec -n 8 ./seism-read seism-test.h5
 

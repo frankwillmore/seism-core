@@ -73,8 +73,8 @@ void precreate_0
 {
     hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
     assert(fapl >= 0);
-//    assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
-//           0);
+    assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
+           0);
 
     hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
     assert(file >= 0);
@@ -452,11 +452,6 @@ int main(int argc, char** argv)
         assert(dset_chunked >= 0);
     }
 
-//H5Dclose(dset_chunked);
-//H5Fclose(file);
-//MPI_Finalize();
-//exit(0);
-
     MPI_Barrier(MPI_COMM_WORLD);
     double stop_create = MPI_Wtime();
 
@@ -469,7 +464,6 @@ int main(int argc, char** argv)
     for (size_t it = 0; it < simulation_time; ++it)
     {
         start[0] = (hsize_t) it;
-//cout << *start << ", " << *count << ", " << *block << endl;
         assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, count,
                                    block) >= 0);
         assert(H5Dwrite(dset_chunked, H5T_NATIVE_FLOAT, mspace, fspace, dxpl,
