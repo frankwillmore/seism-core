@@ -33,7 +33,7 @@ seism-core-check: seism-core-check.cc seism-core-attributes.o
 
 check-slice: seism-core-slice seism-core-check
 	@printf "\033[31;01m *** generating test file for 2x2x2 domain ***\033[0m\n"
-	aprun -N 8 -n 8 ./seism-core-slice < ../tests/check.in
+	srun -n 8 ./seism-core-slice < ../tests/check.in
 	@printf "\033[31;01m *** test file created ***\033[0m\n"
 	./seism-core-check seism-test.h5
 	@printf "\033[31;01m *** check complete ***\033[0m\n\n"
@@ -54,13 +54,14 @@ check-sd: seism-core-slice seism-core-check seism-core-plugin
 	#rm seism-test.h5
 
 check-subfile: seism-core-slice 
-	mpiexec -n 8 ./seism-core-slice < ../tests/subfile.in
+	srun -n 8 ./seism-core-slice < ../tests/subfile.in
 
 check-serial: seism-core-slice
 	./seism-core-slice < ../tests/serial.in
 
-check-read: seism-read
-	mpiexec -n 8 ./seism-read seism-test.h5
+check-read: seism-read check-subfile
+	srun -n 8 ./seism-read seism-test.h5
+	srun -n 8 ./seism-read seism-test.h5 --ignore-subfile
 
 seism-core-plugin: plugins/libplugins.so 
 	cd plugins && make 
@@ -69,7 +70,7 @@ clean:
 	rm -f *.o *.h5
 
 veryclean: clean
-	rm -f seism-core-slice-* seism-core-slice seism-core-check
+	rm -f seism-core-slice-* seism-core-slice seism-core-check seism-read 
 
 
 

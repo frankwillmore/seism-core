@@ -123,6 +123,7 @@ int main(int argc, char** argv)
     int never_fill = 0;
     int deflate = 0;
     int subfile = 0;
+    int n_nodes = 0;
     char use_function_lib[256];
     use_function_lib[0] = 0; // truncate any junk string in auto var
     char use_function_name[256];
@@ -162,6 +163,8 @@ int main(int argc, char** argv)
               cin >> deflate;
             if (!parameter.compare("subfile"))
               cin >> subfile;
+            if (!parameter.compare("n_nodes"))
+              cin >> n_nodes;
             if (!parameter.compare("use_function_lib"))
               cin >> use_function_lib;
             if (!parameter.compare("use_function_name"))
@@ -201,6 +204,8 @@ int main(int argc, char** argv)
            MPI_SUCCESS);
     assert(MPI_Bcast(&subfile, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
            MPI_SUCCESS);
+    assert(MPI_Bcast(&n_nodes, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+           MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_lib, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_name, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_argc, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
@@ -230,6 +235,7 @@ int main(int argc, char** argv)
             " x " << domain[2] << endl;
         if (!subfile) cout << "Chunk dimensions:\t\t" << chunk[0] << " x " 
             << chunk[1] << " x " << chunk[2] << endl;
+        if (n_nodes) cout << "n_nodes:\t\t\t" << n_nodes << endl;
         cout << "Number of time steps:\t\t" << simulation_time << endl;
         cout << "Pre-create:\t\t\t" << precreate << endl;
         cout << "Collective I/O:\t\t\t" << collective_write << endl;
@@ -407,6 +413,7 @@ int main(int argc, char** argv)
     {
         // split by color
         int color = mpi_rank % subfile;
+        if (n_nodes) color = mpi_rank % n_nodes;
         MPI_Comm_split (MPI_COMM_WORLD, color, mpi_rank, &comm);
         sprintf(subfile_name, "Subfile_%d.h5", color);
         assert(H5Pset_subfiling_access(fapl, subfile_name, comm, MPI_INFO_NULL) >= 0); 
@@ -555,7 +562,7 @@ int main(int argc, char** argv)
         assert (file >= 0);
         char* argv_junk = (char*)use_function_argv_c_str;
         seismCoreAttributes attr((char*)"my_attr", processor, chunk, domain, 
-                simulation_time, collective_write, precreate, 
+                simulation_time, n_nodes, subfile, collective_write, precreate, 
                 set_collective_metadata, never_fill, deflate, zfp,
                 use_function_lib, use_function_name, use_function_argc, 
                 argv_junk );
