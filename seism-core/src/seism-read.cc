@@ -70,7 +70,8 @@ int main(int argc, char** argv)
         }
 
     if (subfile) {
-        H5Fclose(file);
+        //attr.finalize(); // need to do this before closing file
+        //H5Fclose(file);
 
         // set up property list and communicator
         hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
@@ -89,9 +90,10 @@ cout << mpi_rank << " has read comm = " << comm << endl;
 
         // now open file again, with subfiling enabled
         H5Pset_subfiling_access(fapl_id, subfile_name, comm, MPI_INFO_NULL);
-        file = H5Fopen(filename, H5F_ACC_RDONLY, fapl_id);
-        assert (file >= 0);
+        //file = H5Fopen(filename, H5F_ACC_RDONLY, fapl_id);
+        //assert (file >= 0);
         assert(H5Pclose(fapl_id) >= 0);
+        //attr = seismCoreAttributes(file);
     }
 
 
