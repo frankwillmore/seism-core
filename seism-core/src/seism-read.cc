@@ -75,20 +75,23 @@ int main(int argc, char** argv)
         // set up property list and communicator
         hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
         assert (fapl_id >= 0);
-    
+
         // split by color
-        int color = mpi_rank % attr.n_nodes;
+//        int color = mpi_rank % attr.n_nodes;
+//        if (attr.subfile > attr.n_nodes)
+        int color = mpi_rank % attr.subfile;
+cout << "n_nodes = " << attr.n_nodes << endl;
+cout << "color = " << color << endl;
         MPI_Comm_split (MPI_COMM_WORLD, color, mpi_rank, &comm);
+cout << mpi_rank << " has read comm = " << comm << endl;
         sprintf(subfile_name, "Subfile_%d.h5", color);
-    MPI_Barrier(MPI_COMM_WORLD);
         cout << "reading subfiled file:\t\t" << subfile_name << endl;
-    MPI_Barrier(MPI_COMM_WORLD);
 
         // now open file again, with subfiling enabled
         H5Pset_subfiling_access(fapl_id, subfile_name, comm, MPI_INFO_NULL);
         file = H5Fopen(filename, H5F_ACC_RDONLY, fapl_id);
         assert (file >= 0);
-        H5Pclose(fapl_id);
+        assert(H5Pclose(fapl_id) >= 0);
     }
 
 
@@ -115,6 +118,7 @@ int main(int argc, char** argv)
     hsize_t count[4] = {1,1,1,1};
     hsize_t block[4] = {1, attr.domain_dims[0], attr.domain_dims[1], attr.domain_dims[2]};
 
+cout << mpi_rank << " before" << endl;
     // select hyperslab within file dataspace
     assert ( H5Sselect_hyperslab( fspace, H5S_SELECT_SET, start, stride, count, block ) >= 0 );
 
@@ -122,13 +126,17 @@ int main(int argc, char** argv)
     assert (mspace >= 0);
     assert (H5Sselect_all(mspace) >= 0);
 
+cout << mpi_rank << " between" << endl;
     // read the dataset into the buffer
     double begin_read = MPI_Wtime();
+cout << mpi_rank << " between2" << endl;
     assert( H5Dread (dset, H5T_NATIVE_FLOAT, mspace, fspace, H5P_DEFAULT, buffer) >= 0);
+cout << mpi_rank << " between3" << endl;
     double end_read = MPI_Wtime();
 
     double _read_time = end_read - begin_read;
     double read_time;
+cout << mpi_rank << " after" << endl;
 
     MPI_Reduce(&_read_time, &read_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     if (mpi_rank == 0){

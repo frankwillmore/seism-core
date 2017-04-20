@@ -221,7 +221,7 @@ int main(int argc, char** argv)
 
     // Subfiling and chunking not compatible, so ignore chunk info
     if (!subfile) assert(chunk[0] > 1 && chunk[1] > 1 && chunk[2] > 1);
-    assert(domain[0] > 1 && domain[1] > 1 && domain[2] > 1);
+    assert(domain[0] > 0 && domain[1] > 0 && domain[2] > 0);
 
     if (mpi_rank == 0)
     {
@@ -405,16 +405,19 @@ int main(int argc, char** argv)
         info = MPI_INFO_NULL;
     }
 
-    MPI_Comm comm = MPI_COMM_WORLD;
-    assert(H5Pset_fapl_mpio(fapl, comm, info) >= 0);
+    assert(H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, info) >= 0);
 
-    char subfile_name[256];
     if (subfile) 
     {
+        MPI_Comm comm;
+        char subfile_name[256];
+
         // split by color
         int color = mpi_rank % subfile;
-        if (n_nodes) color = mpi_rank % n_nodes;
+        // if (n_nodes > subfile) color = mpi_rank % n_nodes;
+cout << mpi_rank << " has color = " << color << " and subfile = " << subfile << endl;
         MPI_Comm_split (MPI_COMM_WORLD, color, mpi_rank, &comm);
+cout << mpi_rank << " has write comm = " << comm << endl;
         sprintf(subfile_name, "Subfile_%d.h5", color);
         assert(H5Pset_subfiling_access(fapl, subfile_name, comm, MPI_INFO_NULL) >= 0); 
         

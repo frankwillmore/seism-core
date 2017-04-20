@@ -122,7 +122,7 @@ seismCoreAttributes::seismCoreAttributes
     domain_dims[2] = _domain_dims[2];
     simulation_time = _simulation_time;
     n_nodes = _n_nodes;
-    n_nodes = _subfile;
+    subfile = _subfile;
     collective_write = _collective_write;
     precreate = _precreate;
     set_collective_metadata = _set_collective_metadata;
