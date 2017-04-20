@@ -18,8 +18,10 @@ check-slice: seism-core-slice seism-core-check
 	ls -l seism-test.h5
 	rm seism-test.h5
 
-check-subfile: seism-core-slice 
+check-subfile: seism-core-slice seism-read
 	mpiexec -n 8 ./seism-core-slice < ../tests/subfile.in
+	mpiexec -n 8 ./seism-read seism-test.h5
+	rm seism-test.h5 Subfile_*.h5
 
 check-read: seism-read
 	mpiexec -n 8 ./seism-read seism-test.h5

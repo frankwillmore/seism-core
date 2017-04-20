@@ -278,10 +278,10 @@ int main(int argc, char** argv)
     assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
     if (deflate != 0) assert(H5Pset_deflate (dcpl, deflate) >= 0);
     
+#ifdef INCLUDE_ZFP
 	// ZFP
 	size_t cd_nelmts = 4;
 	unsigned int cd_values[] = {3, 0, 0, 0};
-#ifdef INCLUDE_ZFP
     if (zfp != 0) 
 	{
 		assert(H5Z_zfp_initialize() >= 0);
@@ -414,10 +414,8 @@ int main(int argc, char** argv)
 
         // split by color
         int color = mpi_rank % subfile;
-        // if (n_nodes > subfile) color = mpi_rank % n_nodes;
-cout << mpi_rank << " has color = " << color << " and subfile = " << subfile << endl;
+        if (n_nodes > subfile) color = mpi_rank % n_nodes;
         MPI_Comm_split (MPI_COMM_WORLD, color, mpi_rank, &comm);
-cout << mpi_rank << " has write comm = " << comm << endl;
         sprintf(subfile_name, "Subfile_%d.h5", color);
         assert(H5Pset_subfiling_access(fapl, subfile_name, comm, MPI_INFO_NULL) >= 0); 
         
