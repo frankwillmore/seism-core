@@ -29,7 +29,9 @@
 #include "hdf5.h"
 
 #include <cstdlib>
+#ifdef INCLUDE_ZFP
 #include <H5Zzfp.h>
+#endif
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -71,8 +73,8 @@ void precreate_0
 {
     hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
     assert(fapl >= 0);
-//    assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
-//           0);
+    assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
+           0);
 
     hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
     assert(file >= 0);
@@ -121,6 +123,7 @@ int main(int argc, char** argv)
     int never_fill = 0;
     int deflate = 0;
     int subfile = 0;
+    int n_nodes = 0;
     char use_function_lib[256];
     use_function_lib[0] = 0; // truncate any junk string in auto var
     char use_function_name[256];
@@ -160,6 +163,8 @@ int main(int argc, char** argv)
               cin >> deflate;
             if (!parameter.compare("subfile"))
               cin >> subfile;
+            if (!parameter.compare("n_nodes"))
+              cin >> n_nodes;
             if (!parameter.compare("use_function_lib"))
               cin >> use_function_lib;
             if (!parameter.compare("use_function_name"))
@@ -199,6 +204,8 @@ int main(int argc, char** argv)
            MPI_SUCCESS);
     assert(MPI_Bcast(&subfile, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
            MPI_SUCCESS);
+    assert(MPI_Bcast(&n_nodes, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+           MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_lib, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_name, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_argc, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
@@ -211,8 +218,10 @@ int main(int argc, char** argv)
     assert(processor[0]*processor[1]*processor[2] == (hsize_t) mpi_size);
     // I'm removing the below restriction to allow for serial case
     // assert(processor[0] > 1 && processor[1] > 1 && processor[2] > 1);
-    assert(chunk[0] > 1 && chunk[1] > 1 && chunk[2] > 1);
-    assert(domain[0] > 1 && domain[1] > 1 && domain[2] > 1);
+
+    // Subfiling and chunking not compatible, so ignore chunk info
+    if (!subfile) assert(chunk[0] > 1 && chunk[1] > 1 && chunk[2] > 1);
+    assert(domain[0] > 0 && domain[1] > 0 && domain[2] > 0);
 
     if (mpi_rank == 0)
     {
@@ -221,11 +230,12 @@ int main(int argc, char** argv)
         << endl;
         cout << "Number of processes:\t\t" << mpi_size << endl;
         cout << "Process layout:\t\t\t" << processor[0] << " x " <<
-          processor[1] << " x " << processor[2] << endl;
+            processor[1] << " x " << processor[2] << endl;
         cout << "Per process grid:\t\t" << domain[0] << " x " << domain[1] <<
-          " x " << domain[2] << endl;
-        cout << "Chunk dimensions:\t\t" << chunk[0] << " x " << chunk[1] <<
-          " x " << chunk[2] << endl;
+            " x " << domain[2] << endl;
+        if (!subfile) cout << "Chunk dimensions:\t\t" << chunk[0] << " x " 
+            << chunk[1] << " x " << chunk[2] << endl;
+        if (n_nodes) cout << "n_nodes:\t\t\t" << n_nodes << endl;
         cout << "Number of time steps:\t\t" << simulation_time << endl;
         cout << "Pre-create:\t\t\t" << precreate << endl;
         cout << "Collective I/O:\t\t\t" << collective_write << endl;
@@ -262,7 +272,8 @@ int main(int argc, char** argv)
     // create dcpl and set properties
     hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
     assert(dcpl >= 0);
-    assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
+    // subfiling not compatible with chunking
+    if (!subfile) assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
     if (never_fill) assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
     assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
     if (deflate != 0) assert(H5Pset_deflate (dcpl, deflate) >= 0);
@@ -270,11 +281,13 @@ int main(int argc, char** argv)
 	// ZFP
 	size_t cd_nelmts = 4;
 	unsigned int cd_values[] = {3, 0, 0, 0};
+#ifdef INCLUDE_ZFP
     if (zfp != 0) 
 	{
 		assert(H5Z_zfp_initialize() >= 0);
 		assert(H5Pset_filter(dcpl, H5Z_FILTER_ZFP, H5Z_FLAG_MANDATORY,cd_nelmts, cd_values) >= 0);
 	}
+#endif
 
     hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
     assert(dapl >= 0);
@@ -392,15 +405,19 @@ int main(int argc, char** argv)
         info = MPI_INFO_NULL;
     }
 
-    MPI_Comm comm = MPI_COMM_WORLD;
-    assert(H5Pset_fapl_mpio(fapl, comm, info) >= 0);
+    assert(H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, info) >= 0);
 
-    char subfile_name[256];
     if (subfile) 
     {
+        MPI_Comm comm;
+        char subfile_name[256];
+
         // split by color
         int color = mpi_rank % subfile;
+        // if (n_nodes > subfile) color = mpi_rank % n_nodes;
+cout << mpi_rank << " has color = " << color << " and subfile = " << subfile << endl;
         MPI_Comm_split (MPI_COMM_WORLD, color, mpi_rank, &comm);
+cout << mpi_rank << " has write comm = " << comm << endl;
         sprintf(subfile_name, "Subfile_%d.h5", color);
         assert(H5Pset_subfiling_access(fapl, subfile_name, comm, MPI_INFO_NULL) >= 0); 
         
@@ -448,11 +465,6 @@ int main(int argc, char** argv)
         assert(dset_chunked >= 0);
     }
 
-//H5Dclose(dset_chunked);
-//H5Fclose(file);
-//MPI_Finalize();
-//exit(0);
-
     MPI_Barrier(MPI_COMM_WORLD);
     double stop_create = MPI_Wtime();
 
@@ -465,7 +477,6 @@ int main(int argc, char** argv)
     for (size_t it = 0; it < simulation_time; ++it)
     {
         start[0] = (hsize_t) it;
-//cout << *start << ", " << *count << ", " << *block << endl;
         assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, count,
                                    block) >= 0);
         assert(H5Dwrite(dset_chunked, H5T_NATIVE_FLOAT, mspace, fspace, dxpl,
@@ -476,9 +487,9 @@ int main(int argc, char** argv)
     double stop_chunked = MPI_Wtime();
 
     ///////////////////////////////////////////////////////////////////////////
-	
-	// get storage size before closing dataset
-	hsize_t storage_size = H5Dget_storage_size(dset_chunked);
+
+    // get storage size before closing dataset
+    hsize_t storage_size = H5Dget_storage_size(dset_chunked);
 
     assert(H5Dclose(dset_chunked) >= 0);
     assert(H5Pclose(fapl) >= 0);
@@ -487,7 +498,9 @@ int main(int argc, char** argv)
     assert(H5Sclose(fspace) >= 0);
     assert(H5Pclose(dcpl) >= 0);
 
+#ifdef INCLUDE_ZFP
     if (zfp != 0) assert(H5Z_zfp_finalize() >= 0);
+#endif
 
     // verify that metadata ops actually performed collectively
     hbool_t actual_metadata_ops_collective;
@@ -552,7 +565,7 @@ int main(int argc, char** argv)
         assert (file >= 0);
         char* argv_junk = (char*)use_function_argv_c_str;
         seismCoreAttributes attr((char*)"my_attr", processor, chunk, domain, 
-                simulation_time, collective_write, precreate, 
+                simulation_time, n_nodes, subfile, collective_write, precreate, 
                 set_collective_metadata, never_fill, deflate, zfp,
                 use_function_lib, use_function_name, use_function_argc, 
                 argv_junk );

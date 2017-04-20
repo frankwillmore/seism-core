@@ -11,6 +11,7 @@
 
 #include "hdf5.h"
 
+#include <cstring>
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -30,6 +31,8 @@ int main(int argc, char** argv)
     int mpi_rank, mpi_size;
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    MPI_Comm comm;
+    char subfile_name[256];
 
     if (argc < 2) {
         cout << "No filename specified\n" ;
@@ -38,29 +41,59 @@ int main(int argc, char** argv)
     }
     char* filename = argv[1];
 
-    if (mpi_rank == 0) cout << "Reading " << filename << endl;
+    if (mpi_rank == 0){
+        cout << "=====================================================================" << endl;
+        cout << "Reading " << filename << endl;
+    }
     
-    // open file and read the attributes
+    // open file to read the attributes
     hid_t file = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-    assert(file >= 0);
     seismCoreAttributes attr(file);
+    if (mpi_rank == 0){
+        cout << endl;
+        cout << "processor layout:\t\t";
+        cout << attr.processor_dims[0] << ":";
+        cout << attr.processor_dims[1] << ":";
+        cout << attr.processor_dims[2] << endl;
+        cout << "domain dims:\t\t\t";
+        cout << attr.domain_dims[0] << ":";
+        cout << attr.domain_dims[1] << ":";
+        cout << attr.domain_dims[2] << endl;
+        cout << endl;
+    }
+    
+    // if subfiling was done, close and re-open the file
+    unsigned int subfile = attr.subfile;
+    for (int i = 2; i<argc; i++) if (!strcmp(argv[i], "--ignore-subfile")) {
+            subfile = 0;
+            if (mpi_rank == 0) cout << "Ignoring subfiling..." << endl;
+        }
 
-    /*
-    cout << endl;
-    cout << "processor dims: ";
-    cout << attr.processor_dims[0] << ":";
-    cout << attr.processor_dims[1] << ":";
-    cout << attr.processor_dims[2] << endl;
-    cout << "chunk dims: ";
-    cout << attr.chunk_dims[0] << ":";
-    cout << attr.chunk_dims[1] << ":";
-    cout << attr.chunk_dims[2] << endl;
-    cout << "domain dims: ";
-    cout << attr.domain_dims[0] << ":";
-    cout << attr.domain_dims[1] << ":";
-    cout << attr.domain_dims[2] << endl;
-    cout << endl;
-    */
+    if (subfile) {
+        H5Fclose(file);
+
+        // set up property list and communicator
+        hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+        assert (fapl_id >= 0);
+
+        // split by color
+//        int color = mpi_rank % attr.n_nodes;
+//        if (attr.subfile > attr.n_nodes)
+        int color = mpi_rank % attr.subfile;
+cout << "n_nodes = " << attr.n_nodes << endl;
+cout << "color = " << color << endl;
+        MPI_Comm_split (MPI_COMM_WORLD, color, mpi_rank, &comm);
+cout << mpi_rank << " has read comm = " << comm << endl;
+        sprintf(subfile_name, "Subfile_%d.h5", color);
+        cout << "reading subfiled file:\t\t" << subfile_name << endl;
+
+        // now open file again, with subfiling enabled
+        H5Pset_subfiling_access(fapl_id, subfile_name, comm, MPI_INFO_NULL);
+        file = H5Fopen(filename, H5F_ACC_RDONLY, fapl_id);
+        assert (file >= 0);
+        assert(H5Pclose(fapl_id) >= 0);
+    }
+
 
     // open the dataset
     hid_t dset = H5Dopen (file, "chunked", H5P_DEFAULT);
@@ -78,8 +111,6 @@ int main(int argc, char** argv)
     start[1] = (hsize_t) ((mpi_rank - start[3])/attr.processor_dims[2] - start[2]) / attr.processor_dims[1];
     start[0] = 0; // because we can only do single time step with current subfiling implementation
 
-//        cout << "Got process #" << mpi_rank << " starting at " << start[1] << ", " << start[2] << ", " << start[3] << "]" << endl;
-
     // get the dataspace
     hid_t fspace = H5Dget_space(dset);
     assert(fspace >= 0);
@@ -87,8 +118,7 @@ int main(int argc, char** argv)
     hsize_t count[4] = {1,1,1,1};
     hsize_t block[4] = {1, attr.domain_dims[0], attr.domain_dims[1], attr.domain_dims[2]};
 
-//if (mpi_rank == 0) cout << "Got block size [" << block[1] << ", " << block[2] << ", " << block[3] << "]" << endl;
-
+cout << mpi_rank << " before" << endl;
     // select hyperslab within file dataspace
     assert ( H5Sselect_hyperslab( fspace, H5S_SELECT_SET, start, stride, count, block ) >= 0 );
 
@@ -96,21 +126,26 @@ int main(int argc, char** argv)
     assert (mspace >= 0);
     assert (H5Sselect_all(mspace) >= 0);
 
+cout << mpi_rank << " between" << endl;
     // read the dataset into the buffer
     double begin_read = MPI_Wtime();
+cout << mpi_rank << " between2" << endl;
     assert( H5Dread (dset, H5T_NATIVE_FLOAT, mspace, fspace, H5P_DEFAULT, buffer) >= 0);
+cout << mpi_rank << " between3" << endl;
     double end_read = MPI_Wtime();
 
     double _read_time = end_read - begin_read;
     double read_time;
+cout << mpi_rank << " after" << endl;
 
-    //MPI_Reduce( void* send_data, void* recv_data, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm communicator);
     MPI_Reduce(&_read_time, &read_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     if (mpi_rank == 0){
-        cout << "Read time: \t\t\t" << read_time << endl;
         unsigned long data_size = sizeof(float) * mpi_size * domain_size;
         double throughput_MB = (1.0e-6 * data_size) / read_time;
-        cout << "Throughput: \t\t\t" << throughput_MB << " MB/s" << endl;
+        cout << endl;
+        cout << "Total bytes read:\t\t" << data_size << endl;
+        cout << "Read time: \t\t\t" << read_time << " s"  << endl;
+        cout << "Read throughput: \t\t" << throughput_MB << " MB/s" << endl;
     }
     
     attr.finalize(); // will finalize/dispose of internal H5 resources

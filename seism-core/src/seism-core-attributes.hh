@@ -11,6 +11,8 @@ class seismCoreAttributes
         hsize_t chunk_dims[3];
         hsize_t domain_dims[3];
         unsigned int simulation_time;
+        unsigned int n_nodes;
+        unsigned int subfile;
         int collective_write;
         int precreate;
         int set_collective_metadata;
@@ -30,6 +32,8 @@ class seismCoreAttributes
             hsize_t* _chunk_dims,
             hsize_t* _domain_dims,
             unsigned int _simulation_time,
+            unsigned int _n_nodes,
+            unsigned int _subfile,
             int _collective_write,
             int _precreate,
             int _set_collective_metadata,
@@ -62,7 +66,7 @@ class seismCoreAttributes
 
         void init(); // create H5 objects used internally
 
-        bool is_finalized = false;
+        bool is_finalized;
 
 };
 
