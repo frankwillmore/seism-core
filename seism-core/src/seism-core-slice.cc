@@ -112,6 +112,7 @@ int main(int argc, char** argv)
 
 
     // rank 0 reads the input file, then broadcasts
+    string fname = "seism-test.h5";
     string parameter, rest_of_line;
     unsigned int simulation_time;
     hsize_t processor[3], chunk[3], domain[3];
@@ -120,6 +121,8 @@ int main(int argc, char** argv)
     int set_collective_metadata = 0;
     int never_fill = 0;
     int deflate = 0;
+    unsigned lfs_stripe_count = 0;
+    unsigned lfs_stripe_size = 0;
     char use_function_lib[256];
     char use_function_name[256];
     use_function_name[0] = 0; // if no param passed, then strcmp test will fail
@@ -155,6 +158,10 @@ int main(int argc, char** argv)
               never_fill = true;
             if (!parameter.compare("deflate"))
               cin >> deflate;
+            if (!parameter.compare("lfs_stripe_count"))
+              cin >> lfs_stripe_count;
+            if (!parameter.compare("lfs_stripe_size"))
+              cin >> lfs_stripe_size;
             if (!parameter.compare("use_function_lib"))
               cin >> use_function_lib;
             if (!parameter.compare("use_function_name"))
@@ -227,8 +234,30 @@ int main(int argc, char** argv)
         cout << "H5D_FILL_TIME_NEVER set:\t" << never_fill << endl;
         cout << "Deflate: \t\t\t" << deflate << endl;
         cout << "ZFP: \t\t\t\t" << zfp << endl;
+        cout << "stripe size: \t\t\t" << lfs_stripe_size;
+        cout << "stripe count: \t\t\t" << lfs_stripe_count;
         cout << endl;
+
+        // attempt to set striping, if requested
+        if (lfs_stripe_size || lfs_stripe_count) {
+            int lfs_status = system("which lfs > /dev/null 2 >&1");
+            if (lfs_status) {
+                cout << "Lustre lfs utility not found. " 
+                     << "File will have default striping, if any." << endl;
+            }
+            else {
+                char lfs_size_str[256];
+                char lfs_count_str[256];
+                if (lfs_stripe_size) sprintf(lfs_size_str, "-s %d ", lfs_stripe_size);
+                if (lfs_stripe_count) sprintf(lfs_count_str, "-s %d ", lfs_stripe_count);
+                char lfs_command[256];
+                sprintf(lfs_command, "lfs setstripe %s %s %s > /dev/null ", lfs_stripe_size, lfs_strip_count, fname);
+                assert(system(lfs_command) == 0) ; // run striping command on shell.
+            }
+        }
     }
+
+    MPI_Barrier();
 
     //////////////////////////////////////////////////////////////////////////
     // create the fle dataspace, time dimension first!
@@ -386,7 +415,7 @@ int main(int argc, char** argv)
     assert(H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, info) >= 0);
 
     // file handle and name for file which will be created
-    string fname = "seism-test.h5";
+    // string fname = "seism-test.h5";
     hid_t file, dset_chunked;
 
     MPI_Barrier(MPI_COMM_WORLD);
