@@ -414,7 +414,8 @@ int main(int argc, char** argv)
 
         // split by color
         int color = mpi_rank % subfile;
-        if (n_nodes > subfile) color = mpi_rank % n_nodes;
+        // group io on nodes
+        if (n_nodes > subfile) color = (mpi_rank % n_nodes) % subfile;
         MPI_Comm_split (MPI_COMM_WORLD, color, mpi_rank, &comm);
         sprintf(subfile_name, "Subfile_%d.h5", color);
         assert(H5Pset_subfiling_access(fapl, subfile_name, comm, MPI_INFO_NULL) >= 0); 

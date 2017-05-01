@@ -76,7 +76,8 @@ int main(int argc, char** argv)
 
         // split by color
         int color = mpi_rank % attr.subfile;
-        if (attr.n_nodes > attr.subfile) color = mpi_rank % attr.n_nodes;
+        // group io to same node
+        if (attr.n_nodes > attr.subfile) color = (mpi_rank % attr.n_nodes) % attr.subfile;
         MPI_Comm_split (MPI_COMM_WORLD, color, mpi_rank, &comm);
         sprintf(subfile_name, "Subfile_%d.h5", color);
         cout << "reading subfiled file:\t\t" << subfile_name << endl;

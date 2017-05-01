@@ -1,7 +1,7 @@
 # default test set
 processor 2 2 2
-chunk 512 512 512
-domain 512 512 512
+#chunk 512 512 512
+domain 256 256 256
 time 1
 #precreate
 #collective_write
