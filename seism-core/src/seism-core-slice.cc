@@ -114,6 +114,7 @@ int main(int argc, char** argv)
 
 
     // rank 0 reads the input file, then broadcasts
+    string fname = "seism-test.h5";
     string parameter, rest_of_line;
     unsigned int simulation_time;
     hsize_t processor[3], chunk[3], domain[3];
@@ -124,6 +125,8 @@ int main(int argc, char** argv)
     int deflate = 0;
     int subfile = 0;
     int n_nodes = 0;
+    unsigned lfs_stripe_count = 0;
+    unsigned lfs_stripe_size = 0;
     char use_function_lib[256];
     use_function_lib[0] = 0; // truncate any junk string in auto var
     char use_function_name[256];
@@ -165,6 +168,10 @@ int main(int argc, char** argv)
               cin >> subfile;
             if (!parameter.compare("n_nodes"))
               cin >> n_nodes;
+            if (!parameter.compare("lfs_stripe_count"))
+              cin >> lfs_stripe_count;
+            if (!parameter.compare("lfs_stripe_size"))
+              cin >> lfs_stripe_size;
             if (!parameter.compare("use_function_lib"))
               cin >> use_function_lib;
             if (!parameter.compare("use_function_name"))
@@ -240,13 +247,39 @@ int main(int argc, char** argv)
         cout << "Pre-create:\t\t\t" << precreate << endl;
         cout << "Collective I/O:\t\t\t" << collective_write << endl;
         cout << "Collective metadata requested:\t" << set_collective_metadata 
-            << endl;
+             << endl;
         cout << "H5D_FILL_TIME_NEVER set:\t" << never_fill << endl;
         cout << "Deflate: \t\t\t" << deflate << endl;
         cout << "Subfile: \t\t\t" << subfile << endl;
         cout << "ZFP: \t\t\t\t" << zfp << endl;
+        cout << "stripe size: \t\t\t" << lfs_stripe_size << endl;
+        cout << "stripe count: \t\t\t" << lfs_stripe_count << endl;
         cout << endl;
+
+        // attempt to set striping, if requested
+        if (lfs_stripe_size || lfs_stripe_count) {
+//            int lfs_status = system("which lfs > /dev/null 2>&1");
+cout << "here" << endl;
+            int lfs_status = system("which lfs");
+            if (lfs_status) {
+                cout << "Lustre lfs utility not found. " 
+                     << "File will have default striping, if any." << endl;
+            }
+            else {
+                char lfs_size_str[256];
+                char lfs_count_str[256];
+                if (lfs_stripe_size) sprintf(lfs_size_str, "-s %d ", lfs_stripe_size);
+                if (lfs_stripe_count) sprintf(lfs_count_str, "-c %d ", lfs_stripe_count);
+                char lfs_command[256];
+cout << "command:" << lfs_command << endl;
+                sprintf(lfs_command, "lfs setstripe %s %s %s > /dev/null ", lfs_size_str, lfs_count_str, fname.c_str());
+cout << "command:" << lfs_command << endl;
+                assert(system(lfs_command) == 0) ; // run striping command on shell.
+            }
+        }
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
 
     //////////////////////////////////////////////////////////////////////////
     // create the fle dataspace, time dimension first!
@@ -428,7 +461,7 @@ int main(int argc, char** argv)
     }
 
     // file handle and name for file which will be created
-    string fname = "seism-test.h5";
+    // string fname = "seism-test.h5";
     hid_t file, dset_chunked;
 
     MPI_Barrier(MPI_COMM_WORLD);
