@@ -141,6 +141,18 @@ This tells the handler how many additional arguments to pass to the plugin (in a
 
 Specify the values of these additional arguments. For flexibility, these values are passed as string arguments, analogously to the C standard. However, unlike the C standard argv[], user arguments are numbered beginning from zero. 
 
+##  Lustre settings
+
+These options will attempt to run the lfs setsripe command (if available) before the file is created. If the lfs command is not available, a message will print and the default stripe settings (if any) will apply. 
+
+### lfs_stripe_count 2
+
+Specify the number of stripes on a Lustre filesystem.
+
+### lfs_stripe_size 1048576
+
+Specify the size of stripes on a Lustre filesystem.
+
 ---
 
 ## INTERPRETING OUTPUTS
