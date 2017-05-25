@@ -75,6 +75,10 @@ How chunks and domains map to one another is highly configurable.  To simplify, 
 
 Number of time steps to be simulated. 
 
+### filename
+
+Name of HDF5 output file to be generated. Default is "seism-test.h5"
+
 ### precreate
 
 Specifying *precreate* will cause the file and dataset to be created serially, and all chunks to be allocated on process 0. The file is opened, dataset created, resources allocated, and the file is closed on *process 0* only. The file is then re-opened by all processes for writing.
