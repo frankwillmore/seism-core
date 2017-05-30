@@ -1,7 +1,7 @@
 #!/usr/bin/make
 
 CXX=h5pcc
-INCLUDES=$(PHDF5_INCLUDE)/include
+INCLUDES=$(PHDF5_INCLUDE)
 CXXFLAGS=-Wall -pedantic -O2 -std=c++0x -I$(INCLUDES) 
 CXXDEBUGFLAGS=-Wall -pedantic -O0 -g -std=c++0x -I$(INCLUDES) 
 
@@ -13,6 +13,12 @@ seism-core-slice: seism-core-slice.o seism-core-attributes.o
 
 check-slice: seism-core-slice seism-core-check
 	mpiexec -n 8 ./seism-core-slice < ../tests/check.in
+	./seism-core-check seism-test.h5
+	ls -l seism-test.h5
+	rm seism-test.h5
+
+check-serial: seism-core-slice seism-core-check
+	./seism-core-slice < ../tests/serial.in
 	./seism-core-check seism-test.h5
 	ls -l seism-test.h5
 	rm seism-test.h5

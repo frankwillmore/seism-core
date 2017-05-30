@@ -75,6 +75,10 @@ How chunks and domains map to one another is highly configurable.  To simplify, 
 
 Number of time steps to be simulated. 
 
+### filename
+
+Name of HDF5 output file to be generated. Default is "seism-test.h5"
+
 ### precreate
 
 Specifying *precreate* will cause the file and dataset to be created serially, and all chunks to be allocated on process 0. The file is opened, dataset created, resources allocated, and the file is closed on *process 0* only. The file is then re-opened by all processes for writing.
@@ -140,6 +144,18 @@ This tells the handler how many additional arguments to pass to the plugin (in a
 ### use_function_argv 1 1 1 1 
 
 Specify the values of these additional arguments. For flexibility, these values are passed as string arguments, analogously to the C standard. However, unlike the C standard argv[], user arguments are numbered beginning from zero. 
+
+##  Lustre settings
+
+These options will attempt to run the lfs setsripe command (if available) before the file is created. If the lfs command is not available, a message will print and the default stripe settings (if any) will apply. 
+
+### lfs_stripe_count 2
+
+Specify the number of stripes on a Lustre filesystem.
+
+### lfs_stripe_size 1048576
+
+Specify the size of stripes on a Lustre filesystem.
 
 ---
 
