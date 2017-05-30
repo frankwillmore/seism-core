@@ -66,7 +66,8 @@ herr_t H5Pget_all_coll_metadata_ops(hid_t dapl, hbool_t *actual_metadata_ops_col
   
 void precreate_0
 (
-    const string& fname,
+//    const string& filename,
+    const char*   filename,
     hid_t         fspace,
     hid_t         dcpl
 )
@@ -76,7 +77,7 @@ void precreate_0
     assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
            0);
 
-    hid_t file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+    hid_t file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
     assert(file >= 0);
     hid_t dset = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
                            H5P_DEFAULT, dcpl, H5P_DEFAULT);
@@ -114,7 +115,8 @@ int main(int argc, char** argv)
 
 
     // rank 0 reads the input file, then broadcasts
-    string fname = "seism-test.h5";
+    char filename[256];
+    strcpy(filename,  "seism-test.h5");
     string parameter, rest_of_line;
     unsigned int simulation_time;
     hsize_t processor[3], chunk[3], domain[3];
@@ -172,6 +174,8 @@ int main(int argc, char** argv)
               cin >> lfs_stripe_count;
             if (!parameter.compare("lfs_stripe_size"))
               cin >> lfs_stripe_size;
+            if (!parameter.compare("filename"))
+              cin >> filename;
             if (!parameter.compare("use_function_lib"))
               cin >> use_function_lib;
             if (!parameter.compare("use_function_name"))
@@ -213,6 +217,7 @@ int main(int argc, char** argv)
            MPI_SUCCESS);
     assert(MPI_Bcast(&n_nodes, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
            MPI_SUCCESS);
+    assert(MPI_Bcast(&filename, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_lib, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_name, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_argc, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
@@ -254,6 +259,7 @@ int main(int argc, char** argv)
         cout << "ZFP: \t\t\t\t" << zfp << endl;
         cout << "stripe size: \t\t\t" << lfs_stripe_size << endl;
         cout << "stripe count: \t\t\t" << lfs_stripe_count << endl;
+        cout << "Output filename: \t\t\t" << filename << endl;
         cout << endl;
 
         // attempt to set striping, if requested
@@ -271,9 +277,7 @@ cout << "here" << endl;
                 if (lfs_stripe_size) sprintf(lfs_size_str, "-s %d ", lfs_stripe_size);
                 if (lfs_stripe_count) sprintf(lfs_count_str, "-c %d ", lfs_stripe_count);
                 char lfs_command[256];
-cout << "command:" << lfs_command << endl;
-                sprintf(lfs_command, "lfs setstripe %s %s %s > /dev/null ", lfs_size_str, lfs_count_str, fname.c_str());
-cout << "command:" << lfs_command << endl;
+                sprintf(lfs_command, "lfs setstripe %u %u %s > /dev/null ", lfs_stripe_size, lfs_stripe_count, filename);
                 assert(system(lfs_command) == 0) ; // run striping command on shell.
             }
         }
@@ -461,7 +465,6 @@ cout << "command:" << lfs_command << endl;
     }
 
     // file handle and name for file which will be created
-    // string fname = "seism-test.h5";
     hid_t file, dset_chunked;
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -475,11 +478,11 @@ cout << "command:" << lfs_command << endl;
     {
         if (mpi_rank == 0) // create with process 0, then close & re-open
         {
-            precreate_0(fname, fspace, dcpl);
+            precreate_0(filename, fspace, dcpl);
         }
         MPI_Barrier(MPI_COMM_WORLD);
         create_1 = MPI_Wtime();
-        file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, fapl);
+        file = H5Fopen(filename, H5F_ACC_RDWR, fapl);
         assert (file >= 0);
         MPI_Barrier(MPI_COMM_WORLD);
         create_2 = MPI_Wtime();
@@ -490,7 +493,7 @@ cout << "command:" << lfs_command << endl;
     }
     else
     {
-        file = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+        file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
         assert(file >= 0);
         dset_chunked = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, 
                 fspace, H5P_DEFAULT, dcpl, dapl);
@@ -593,7 +596,7 @@ cout << "command:" << lfs_command << endl;
     if (mpi_rank == 0)
     {
         // re-open the file and write the simulation attributes
-        file = H5Fopen(fname.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+        file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
         assert (file >= 0);
         char* argv_junk = (char*)use_function_argv_c_str;
         seismCoreAttributes attr((char*)"my_attr", processor, chunk, domain, 

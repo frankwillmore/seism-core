@@ -7,8 +7,11 @@ time 5
 #collective_write
 #set_collective_metadata
 #never_fill
-#deflate 5
 #zfp 1 
 #subfile 8
+deflate 0
+filename seism-test.h5
+lfs_stripe_count 2
+#zfp 1
 DONE
 
