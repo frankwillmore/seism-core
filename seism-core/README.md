@@ -15,18 +15,23 @@ Consecutive three-dimensional slices of a four-dimensional dataset are written f
 
 ## BUILDING
 
-It is assumed that the user has HDF5 installed on their system and wields basic knowledge for the compilation and linking of an HDF5-capable code on their platform. Sample Makefiles are provided in the directory 'makefiles', for the following systems:
+It is assumed that the user has HDF5 installed on their system and wields basic knowledge for the compilation and linking of an HDF5-capable code on their platform. Sample Makefiles are provided in the src directory, for the following systems:
 
 * Makefile.bw-1.10.0 for NCSA Blue Waters, using HDF5 version 1.10.0
 * Makefile.jelly for a large shared-memory CentOS system used internally at The HDF Group
 * Makefile.vm for a cluster of VirtualBox vms with Ubuntu, used for testing
+* Makefile.edison for NERSC-Edison
 
 To build and install on a different system, select the most similar architecture and modify as needed.  In either case, running:
 
     $ cd src
     $ make -f ../makefiles/Makefile.whichever_architecture check-slice
 
-will cause the kernel program and its corresponding test program to be built, run, and output checked based on the input file `tests/check.in`. 
+will cause the kernel program 'seism-core-slice' and its corresponding test program to be built, run, and output checked based on the input file `tests/check.in`. 
+
+## FEATURE BUILDS
+
+When evaluating pre-release 'feature builds' of HDF5, seism-core provides for conditional compilation via the included Makefile 'features.mk'. Be sure to comment out any conditional macros that are not supported by the version of the HDF5 library you are using, .e.g. H5_SUBFILING should be commented out if not building against a version which implements the sub-filing feature. 
 
 ---
 
