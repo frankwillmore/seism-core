@@ -259,17 +259,17 @@ int main(int argc, char** argv)
         cout << "ZFP: \t\t\t\t" << zfp << endl;
         cout << "stripe size: \t\t\t" << lfs_stripe_size << endl;
         cout << "stripe count: \t\t\t" << lfs_stripe_count << endl;
-        cout << "Output filename: \t\t\t" << filename << endl;
+        cout << "Output filename: \t\t" << filename << endl;
         cout << endl;
 
         // attempt to set striping, if requested
         if (lfs_stripe_size || lfs_stripe_count) {
-//            int lfs_status = system("which lfs > /dev/null 2>&1");
-cout << "here" << endl;
             int lfs_status = system("which lfs");
             if (lfs_status) {
-                cout << "Lustre lfs utility not found. " 
-                     << "File will have default striping, if any." << endl;
+                cout << endl 
+                     << "Lustre lfs utility not found. " 
+                     << "File will have default striping, if any." << endl 
+                     << endl;
             }
             else {
                 char lfs_size_str[256];
@@ -449,6 +449,7 @@ cout << "here" << endl;
         MPI_Comm comm;
         char subfile_name[256];
 
+#ifdef H5_SUBFILING
         // split by color
         int color = mpi_rank % subfile;
         // group io on nodes
@@ -462,6 +463,11 @@ cout << "here" << endl;
         hsize_t subfiling_start[] = {0, start[1], start[2], start[3]};
         assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, subfiling_start, NULL, count, subfiling_block) >= 0);
         assert (H5Pset_subfiling_selection(dapl, fspace) >= 0); 
+#else 
+        cout << "Warning:  Subfilng requested but library not built with subfiling. " << endl;
+        cout << "          Ignoring subfiling directives. " << endl << endl;
+#endif
+
     }
 
     // file handle and name for file which will be created
