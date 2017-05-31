@@ -1,81 +1,16 @@
-#!/usr/bin/env make
+# Feature versions may require that certain MACROs be defined for conditional compilation
+FEATURES=
+include features.mk
 
-#  remember to load hdf5 module 
-
+# Platform specific stuff
 HDF5_INSTALL_DIR=$(HOME)/local/edison/phdf5
 CXX=CC
-CXXFLAGS=-DCRAYCC -O2 -dynamic
 INCLUDES=-I$(HDF5_INSTALL_DIR)/include
 LIBS=-L$(HDF5_INSTALL_DIR)/lib
-#CXXFLAGS=-O2 -dynamic
+CXXFLAGS=-DCRAYCC -O2 -dynamic -lstdc++ -lhdf5 $(INCLUDES) $(LIBS)
+CXXDEBUGFLAGS=-DCRAYCC -O2 -dynamic -O0 -g 
+MPI_LAUNCHER=srun 
 
-default:
-	@printf "\033[31;01m' *** See instructions in Makefile, for prerequisites on building with 1.10.0 with two versions ***\033[0m\n"
-
-seism-core-slice: seism-core-slice.o seism-core-attributes.o 
-	#$(CXX) $(CXXFLAGS) $(INCLUDES) -ldl -lsz -lstdc++ -lhdf5 seism-core-attributes.o seism-core-slice.o -o seism-core-slice
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LIBS) -ldl -lstdc++ -lhdf5 seism-core-attributes.o seism-core-slice.o -o seism-core-slice
-
-seism-read.o: seism-read.cc
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LIBS) -c $< -o $@
-
-seism-read: seism-read.o seism-core-attributes.o 
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LIBS) -ldl -lstdc++ -lhdf5 seism-core-attributes.o seism-read.o -o $@ 
-
-seism-core-slice.o: seism-core-slice.cc 
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c seism-core-slice.cc -o seism-core-slice.o
-
-seism-core-attributes.o: seism-core-attributes.cc
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
-
-seism-core-check: seism-core-check.cc seism-core-attributes.o
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LIBS) seism-core-check.cc seism-core-attributes.o -o seism-core-check -lstdc++ -lhdf5
-
-check-slice: seism-core-slice seism-core-check
-	@printf "\033[31;01m *** generating test file for 2x2x2 domain ***\033[0m\n"
-	srun -n 8 ./seism-core-slice < ../tests/check.in
-	@printf "\033[31;01m *** test file created ***\033[0m\n"
-	./seism-core-check seism-test.h5
-	@printf "\033[31;01m *** check complete ***\033[0m\n\n"
-	@printf "\033[31;01m *** removing test file ***\033[0m\n\n"
-	rm seism-test.h5
-	@printf "\033[31;01m *** done ***\033[0m\n\n"
-
-check-plugin: seism-core-slice seism-core-check seism-core-plugin
-	#mpiexec -n 8 ./seism-core-slice < ../tests/check-plugin.in
-	aprun -N 8 -n 8 ./seism-core-slice < ../tests/check-plugin.in.bw
-	./seism-core-check seism-test.h5
-	rm seism-test.h5
-
-check-sd: seism-core-slice seism-core-check seism-core-plugin
-	#mpiexec -n 8 ./seism-core-slice < ../tests/check-sd.in
-	aprun -N 8 -n 8 ./seism-core-slice < ../tests/check-sd.in.bw
-	#./seism-core-check seism-test.h5
-	#rm seism-test.h5
-
-check-subfile: seism-core-slice 
-	srun -n 8 ./seism-core-slice < ../tests/subfile.in
-
-check-serial: seism-core-slice
-	./seism-core-slice < ../tests/serial.in
-
-check-read: seism-read check-subfile
-	srun -n 8 ./seism-read seism-test.h5
-	srun -n 8 ./seism-read seism-test.h5 --ignore-subfile
-
-seism-core-plugin: plugins/libplugins.so 
-	cd plugins && make 
-
-clean:
-	rm -f *.o *.h5
-
-veryclean: clean
-	rm -f seism-core-slice-* seism-core-slice seism-core-check seism-read 
-
-
-
-
-
-
+include targets.mk
 
 

@@ -42,7 +42,9 @@ int main(int argc, char** argv)
     char* filename = argv[1];
 
     if (mpi_rank == 0){
-        cout << "=====================================================================" << endl;
+        cout << endl
+             << "=====================================================================" 
+             << endl;
         cout << "Reading " << filename << endl;
     }
     
@@ -137,6 +139,9 @@ int main(int argc, char** argv)
         cout << "Total bytes read:\t\t" << data_size << endl;
         cout << "Read time: \t\t\t" << read_time << " s"  << endl;
         cout << "Read throughput: \t\t" << throughput_MB << " MB/s" << endl;
+        cout << "seism-read done. " << endl << endl;
+        cout << "=====================================================================" 
+             << endl;
     }
     
     attr.finalize(); // will finalize/dispose of internal H5 resources

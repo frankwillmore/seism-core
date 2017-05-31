@@ -1,28 +1,6 @@
-// seism-core-test.c //////////////////////////////////////////////////////////
-// This kernel writes a four-dimensional a chunked HDF5 dataset in parallel
-// based on inputs provided on standard input. The required inputs are the
-// following:
-//
-// 1. The dimensions (> 1) of a 3D process grid. The number of processes
-//    must be equal to the MPI communicator size.
-// 2. The spatial dimensions (> 1) of the HDF5 dataset chunks.
-// 3. The voxel resolution (per process).
-// 4. The number of time steps (>= 1) to be written.
-//
-// An example input script is shown below. Binary options are set by 
-// presence or absence of corresponding line:
-//
-// mpiexec -n 8 ./seism-core << EOF
-// processor 2 2 2
-// chunk 180 64 64
-// domain 360 64 64
-// time 2
-// collective_write
-// precreate
-// set_collective_metadata
-// never_fill
-// DONE
-// EOF
+// seism-core-check.c /////////////////////////////////////////////////////////
+// 
+// This code checks that seism-core-slice has produced the correct output.  
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -75,7 +53,6 @@ int main(int argc, char** argv)
     cout << attr.domain_dims[2] << endl;
     cout << endl;
 
-    //int zfp = 1;
 #ifdef INCLUDE_ZFP
     if (zfp != 0) assert(H5Z_zfp_initialize() >= 0);
 #endif

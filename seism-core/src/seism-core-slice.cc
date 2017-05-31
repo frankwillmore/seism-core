@@ -596,6 +596,9 @@ int main(int argc, char** argv)
              << endl;
 		cout << "Total bytes written:\t\t" << bytes_written << endl; 
 		cout << "Compressed size in bytes:\t" << storage_size << endl; 
+        cout << 
+        "====================================================================="
+             << endl << endl;
 
     }
 
