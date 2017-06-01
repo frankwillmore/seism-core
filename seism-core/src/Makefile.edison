@@ -7,7 +7,7 @@ HDF5_INSTALL_DIR=$(HOME)/local/edison/phdf5
 CXX=CC
 INCLUDES=-I$(HDF5_INSTALL_DIR)/include
 LIBS=-L$(HDF5_INSTALL_DIR)/lib
-CXXFLAGS=-DCRAYCC -O2 -dynamic -lstdc++ -lhdf5 $(INCLUDES) $(LIBS)
+CXXFLAGS=-DCRAYCC -O2 -dynamic -lstdc++ -lhdf5 $(INCLUDES) $(LIBS) $(FEATURES)
 CXXDEBUGFLAGS=-DCRAYCC -O2 -dynamic -O0 -g 
 MPI_LAUNCHER=srun 
 
