@@ -64,17 +64,27 @@ int main(int argc, char** argv)
         cout << endl;
     }
     
-    // if subfiling was done, close and re-open the file
     unsigned int subfile = attr.subfile;
     for (int i = 2; i<argc; i++) if (!strcmp(argv[i], "--ignore-subfile")) {
             subfile = 0;
             if (mpi_rank == 0) cout << "Ignoring subfiling..." << endl;
         }
 
+    // if subfiling was done, close and re-open the file
     if (subfile) {
+
+#ifdef H5_SUBFILING
+
+        MPI_Comm comm = MPI_COMM_WORLD;
+        MPI_Info info = MPI_INFO_NULL;
+
+        // close the file now that we have metadata and re-open later for read
+        H5Fclose(file);
+
         // set up property list and communicator
         hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
         assert (fapl_id >= 0);
+        assert (H5Pset_fapl_mpio(fapl_id, comm, info) >= 0);
 
         // split by color
         int color = mpi_rank % attr.subfile;
@@ -86,10 +96,18 @@ int main(int argc, char** argv)
 
         // now open file again, with subfiling enabled
         H5Pset_subfiling_access(fapl_id, subfile_name, comm, MPI_INFO_NULL);
-        //file = H5Fopen(filename, H5F_ACC_RDONLY, fapl_id);
-        //assert (file >= 0);
+        file = H5Fopen(filename, H5F_ACC_RDONLY, fapl_id);
+        assert (file >= 0);
         assert(H5Pclose(fapl_id) >= 0);
-        //attr = seismCoreAttributes(file);
+#else
+        cout << "Warning:  This datafile was sub-filed but this reader was not" 
+             << endl
+             << "          built with subfiling feature, Sub-file awrare read" 
+             << endl
+             << "          is not supported and sub-filing will be ignnored." 
+             << endl << endl;
+#endif
+
     }
 
 
@@ -108,6 +126,11 @@ int main(int argc, char** argv)
     start[2] = (hsize_t) ((mpi_rank - start[3])/attr.processor_dims[2]) % attr.processor_dims[1];
     start[1] = (hsize_t) ((mpi_rank - start[3])/attr.processor_dims[2] - start[2]) / attr.processor_dims[1];
     start[0] = 0; // because we can only do single time step with current subfiling implementation
+
+    // adjust start point by attr.domain_dims
+    start[1] *= attr.domain_dims[0];
+    start[2] *= attr.domain_dims[1];
+    start[3] *= attr.domain_dims[2];
 
     // get the dataspace
     hid_t fspace = H5Dget_space(dset);

@@ -446,10 +446,11 @@ int main(int argc, char** argv)
 
     if (subfile) 
     {
+#ifdef H5_SUBFILING
+
         MPI_Comm comm;
         char subfile_name[256];
 
-#ifdef H5_SUBFILING
         // split by color
         int color = mpi_rank % subfile;
         // group io on nodes

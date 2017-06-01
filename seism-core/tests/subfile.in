@@ -10,5 +10,6 @@ time 1
 #deflate 5
 #zfp 1 
 subfile 8
+n_nodes 1
 DONE
 
