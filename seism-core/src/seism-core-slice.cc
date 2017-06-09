@@ -29,7 +29,9 @@
 #include "hdf5.h"
 
 #include <cstdlib>
+#ifdef INCLUDE_ZFP
 #include <H5Zzfp.h>
+#endif
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -123,14 +125,18 @@ int main(int argc, char** argv)
     int set_collective_metadata = 0;
     int never_fill = 0;
     int deflate = 0;
+    int subfile = 0;
+    int n_nodes = 0;
     unsigned lfs_stripe_count = 0;
     unsigned lfs_stripe_size = 0;
     char use_function_lib[256];
+    use_function_lib[0] = 0; // truncate any junk string in auto var
     char use_function_name[256];
     use_function_name[0] = 0; // if no param passed, then strcmp test will fail
     int use_function_argc = 0;
     string use_function_argv_string;
     char use_function_argv[256];
+    use_function_argv[0] = 0; // truncate any junk string in auto var
 	int zfp = 0;
     const char *use_function_argv_c_str = NULL;
 
@@ -160,6 +166,10 @@ int main(int argc, char** argv)
               never_fill = true;
             if (!parameter.compare("deflate"))
               cin >> deflate;
+            if (!parameter.compare("subfile"))
+              cin >> subfile;
+            if (!parameter.compare("n_nodes"))
+              cin >> n_nodes;
             if (!parameter.compare("lfs_stripe_count"))
               cin >> lfs_stripe_count;
             if (!parameter.compare("lfs_stripe_size"))
@@ -203,6 +213,10 @@ int main(int argc, char** argv)
            MPI_SUCCESS);
     assert(MPI_Bcast(&deflate, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
            MPI_SUCCESS);
+    assert(MPI_Bcast(&subfile, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+           MPI_SUCCESS);
+    assert(MPI_Bcast(&n_nodes, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
+           MPI_SUCCESS);
     assert(MPI_Bcast(&filename, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_lib, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
     assert(MPI_Bcast(&use_function_name, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
@@ -216,8 +230,10 @@ int main(int argc, char** argv)
     assert(processor[0]*processor[1]*processor[2] == (hsize_t) mpi_size);
     // I'm removing the below restriction to allow for serial case
     // assert(processor[0] > 1 && processor[1] > 1 && processor[2] > 1);
-    assert(chunk[0] > 1 && chunk[1] > 1 && chunk[2] > 1);
-    assert(domain[0] > 1 && domain[1] > 1 && domain[2] > 1);
+
+    // Subfiling and chunking not compatible, so ignore chunk info
+    if (!subfile) assert(chunk[0] > 1 && chunk[1] > 1 && chunk[2] > 1);
+    assert(domain[0] > 0 && domain[1] > 0 && domain[2] > 0);
 
     if (mpi_rank == 0)
     {
@@ -226,36 +242,40 @@ int main(int argc, char** argv)
         << endl;
         cout << "Number of processes:\t\t" << mpi_size << endl;
         cout << "Process layout:\t\t\t" << processor[0] << " x " <<
-          processor[1] << " x " << processor[2] << endl;
+            processor[1] << " x " << processor[2] << endl;
         cout << "Per process grid:\t\t" << domain[0] << " x " << domain[1] <<
-          " x " << domain[2] << endl;
-        cout << "Chunk dimensions:\t\t" << chunk[0] << " x " << chunk[1] <<
-          " x " << chunk[2] << endl;
+            " x " << domain[2] << endl;
+        if (!subfile) cout << "Chunk dimensions:\t\t" << chunk[0] << " x " 
+            << chunk[1] << " x " << chunk[2] << endl;
+        if (n_nodes) cout << "n_nodes:\t\t\t" << n_nodes << endl;
         cout << "Number of time steps:\t\t" << simulation_time << endl;
         cout << "Pre-create:\t\t\t" << precreate << endl;
         cout << "Collective I/O:\t\t\t" << collective_write << endl;
         cout << "Collective metadata requested:\t" << set_collective_metadata 
-            << endl;
+             << endl;
         cout << "H5D_FILL_TIME_NEVER set:\t" << never_fill << endl;
         cout << "Deflate: \t\t\t" << deflate << endl;
+        cout << "Subfile: \t\t\t" << subfile << endl;
         cout << "ZFP: \t\t\t\t" << zfp << endl;
         cout << "stripe size: \t\t\t" << lfs_stripe_size << endl;
         cout << "stripe count: \t\t\t" << lfs_stripe_count << endl;
-        cout << "Output filename: \t\t\t" << filename << endl;
+        cout << "Output filename: \t\t" << filename << endl;
         cout << endl;
 
         // attempt to set striping, if requested
         if (lfs_stripe_size || lfs_stripe_count) {
-            int lfs_status = system("which lfs > /dev/null 2 >&1");
+            int lfs_status = system("which lfs");
             if (lfs_status) {
-                cout << "Lustre lfs utility not found. " 
-                     << "File will have default striping, if any." << endl;
+                cout << endl 
+                     << "Lustre lfs utility not found. " 
+                     << "File will have default striping, if any." << endl 
+                     << endl;
             }
             else {
                 char lfs_size_str[256];
                 char lfs_count_str[256];
                 if (lfs_stripe_size) sprintf(lfs_size_str, "-s %d ", lfs_stripe_size);
-                if (lfs_stripe_count) sprintf(lfs_count_str, "-s %d ", lfs_stripe_count);
+                if (lfs_stripe_count) sprintf(lfs_count_str, "-c %d ", lfs_stripe_count);
                 char lfs_command[256];
                 sprintf(lfs_command, "lfs setstripe %u %u %s > /dev/null ", lfs_stripe_size, lfs_stripe_count, filename);
                 assert(system(lfs_command) == 0) ; // run striping command on shell.
@@ -289,11 +309,13 @@ int main(int argc, char** argv)
     // create dcpl and set properties
     hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
     assert(dcpl >= 0);
-    assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
+    // subfiling not compatible with chunking
+    if (!subfile) assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
     if (never_fill) assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
     assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
     if (deflate != 0) assert(H5Pset_deflate (dcpl, deflate) >= 0);
     
+#ifdef INCLUDE_ZFP
 	// ZFP
 	size_t cd_nelmts = 4;
 	unsigned int cd_values[] = {3, 0, 0, 0};
@@ -302,11 +324,12 @@ int main(int argc, char** argv)
 		assert(H5Z_zfp_initialize() >= 0);
 		assert(H5Pset_filter(dcpl, H5Z_FILTER_ZFP, H5Z_FLAG_MANDATORY,cd_nelmts, cd_values) >= 0);
 	}
+#endif
 
     hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
     assert(dapl >= 0);
     ///////////////////////////////////////////////////////////////////////////
-    // prepare hyperslab selection, use max dims, can ignore 4th as needed
+    // prepare hyperslab selection
     hsize_t start[4], block[4], count[4] = {1,1,1,1};
 
     // calculate offsets from MPI rank
@@ -358,7 +381,8 @@ int main(int argc, char** argv)
 
         void *handle;
         // This awkward cast provided to you by the ISO standards team...
-        float (*use_function)(int, hsize_t*, hsize_t*, hsize_t*, hsize_t*, int, char **);
+        float (*use_function)(int, hsize_t*, hsize_t*, hsize_t*, hsize_t*, int,
+                char **);
         char *error;
 
         handle = dlopen (use_function_lib, RTLD_LAZY);
@@ -381,7 +405,6 @@ int main(int argc, char** argv)
             else array[i] = strtok(NULL, " ");
         }   
 
-        //for (unsigned index = 0; index < domain[0] * domain[1] * domain[2]; index++) {
         hsize_t position_in_block[3];
         for (position_in_block[0] = 0; position_in_block[0] < domain[0]; position_in_block[0]++)
         for (position_in_block[1] = 0; position_in_block[1] < domain[1]; position_in_block[1]++)
@@ -418,7 +441,35 @@ int main(int argc, char** argv)
     {
         info = MPI_INFO_NULL;
     }
+
     assert(H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, info) >= 0);
+
+    if (subfile) 
+    {
+#ifdef H5_SUBFILING
+
+        MPI_Comm comm;
+        char subfile_name[256];
+
+        // split by color
+        int color = mpi_rank % subfile;
+        // group io on nodes
+        if (n_nodes > subfile) color = (mpi_rank % n_nodes) % subfile;
+        MPI_Comm_split (MPI_COMM_WORLD, color, mpi_rank, &comm);
+        sprintf(subfile_name, "Subfile_%d.h5", color);
+        assert(H5Pset_subfiling_access(fapl, subfile_name, comm, MPI_INFO_NULL) >= 0); 
+        
+        // select hyperslab for subfiling, superset of selection for writing.
+        hsize_t subfiling_block[] = {simulation_time, domain[0], domain[1], domain[2]};
+        hsize_t subfiling_start[] = {0, start[1], start[2], start[3]};
+        assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, subfiling_start, NULL, count, subfiling_block) >= 0);
+        assert (H5Pset_subfiling_selection(dapl, fspace) >= 0); 
+#else 
+        cout << "Warning:  Subfilng requested but library not built with subfiling. " << endl;
+        cout << "          Ignoring subfiling directives. " << endl << endl;
+#endif
+
+    }
 
     // file handle and name for file which will be created
     hid_t file, dset_chunked;
@@ -478,9 +529,9 @@ int main(int argc, char** argv)
     double stop_chunked = MPI_Wtime();
 
     ///////////////////////////////////////////////////////////////////////////
-	
-	// get storage size before closing dataset
-	hsize_t storage_size = H5Dget_storage_size(dset_chunked);
+
+    // get storage size before closing dataset
+    hsize_t storage_size = H5Dget_storage_size(dset_chunked);
 
     assert(H5Dclose(dset_chunked) >= 0);
     assert(H5Pclose(fapl) >= 0);
@@ -489,7 +540,9 @@ int main(int argc, char** argv)
     assert(H5Sclose(fspace) >= 0);
     assert(H5Pclose(dcpl) >= 0);
 
+#ifdef INCLUDE_ZFP
     if (zfp != 0) assert(H5Z_zfp_finalize() >= 0);
+#endif
 
     // verify that metadata ops actually performed collectively
     hbool_t actual_metadata_ops_collective;
@@ -544,6 +597,9 @@ int main(int argc, char** argv)
              << endl;
 		cout << "Total bytes written:\t\t" << bytes_written << endl; 
 		cout << "Compressed size in bytes:\t" << storage_size << endl; 
+        cout << 
+        "====================================================================="
+             << endl << endl;
 
     }
 
@@ -554,7 +610,7 @@ int main(int argc, char** argv)
         assert (file >= 0);
         char* argv_junk = (char*)use_function_argv_c_str;
         seismCoreAttributes attr((char*)"my_attr", processor, chunk, domain, 
-                simulation_time, collective_write, precreate, 
+                simulation_time, n_nodes, subfile, collective_write, precreate, 
                 set_collective_metadata, never_fill, deflate, zfp,
                 use_function_lib, use_function_name, use_function_argc, 
                 argv_junk );

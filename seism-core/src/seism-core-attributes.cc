@@ -8,6 +8,9 @@ using namespace std;
 
 void seismCoreAttributes::init()
 {
+    // lifecycle management
+    is_finalized = false;
+
     // create the inner array and character types
     vls_t = H5Tcopy(H5T_C_S1);
     H5Tset_size(vls_t, H5T_VARIABLE);
@@ -27,6 +30,10 @@ void seismCoreAttributes::init()
               domain_dims), dim3_t);
     H5Tinsert(attributes_t, "simulation_time", HOFFSET(seismCoreAttributes, 
               simulation_time), H5T_NATIVE_UINT);
+    H5Tinsert(attributes_t, "n_nodes", HOFFSET(seismCoreAttributes, 
+              n_nodes), H5T_NATIVE_UINT);
+    H5Tinsert(attributes_t, "subfile", HOFFSET(seismCoreAttributes, 
+              subfile), H5T_NATIVE_UINT);
     H5Tinsert(attributes_t, "collective_write", HOFFSET(seismCoreAttributes,
               collective_write), H5T_NATIVE_INT);
     H5Tinsert(attributes_t, "precreate", HOFFSET(seismCoreAttributes, 
@@ -89,6 +96,8 @@ seismCoreAttributes::seismCoreAttributes
     hsize_t *_chunk_dims,
     hsize_t *_domain_dims,
     unsigned int _simulation_time,
+    unsigned int _n_nodes,
+    unsigned int _subfile,
     int _collective_write,
     int _precreate,
     int _set_collective_metadata,
@@ -112,6 +121,8 @@ seismCoreAttributes::seismCoreAttributes
     domain_dims[1] = _domain_dims[1];
     domain_dims[2] = _domain_dims[2];
     simulation_time = _simulation_time;
+    n_nodes = _n_nodes;
+    subfile = _subfile;
     collective_write = _collective_write;
     precreate = _precreate;
     set_collective_metadata = _set_collective_metadata;
@@ -157,10 +168,15 @@ seismCoreAttributes::seismCoreAttributes(hid_t file_id)
 
 seismCoreAttributes::~seismCoreAttributes()
 {
+    if (!is_finalized) finalize();
+}
+
+void seismCoreAttributes::finalize(){
     // close resources 
-    H5Tclose(attributes_t);
-    H5Tclose(vls_t); 
+    assert(H5Tclose(attributes_t) >= 0);
+    assert(H5Tclose(vls_t) >= 0); 
 //    H5Tclose(fls_t); 
-    H5Tclose(dim3_t); 
+    assert(H5Tclose(dim3_t) >= 0); 
+    is_finalized = true;
 }
  

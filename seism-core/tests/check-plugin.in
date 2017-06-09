@@ -7,7 +7,7 @@ precreate
 collective_write
 set_collective_metadata
 never_fill
-deflate 5
+deflate 0
 use_function_lib libplugins.so
 #use_function_name mpi_rank_fill
 use_function_name gaussian

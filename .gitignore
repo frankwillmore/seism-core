@@ -4,6 +4,7 @@ seism-core-test
 seism-core-check
 seism-core-check-static
 seism-read
+a.out
 *.o
 *.so
 *.h5

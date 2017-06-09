@@ -10,17 +10,17 @@ INCLUDES=-I$(HOME)/local/include
 CXXFLAGS=-Wall -pedantic -O2 -std=c++0x $(INCLUDES)
 CXXDEBUGFLAGS=-Wall -pedantic -O0 -g -std=c++0x -I/mnt/wrk/Frank.Willmore/usr/local/phdf5/include
 
-MPIEXEC=mpiexec -f machinefile
+MPI_LAUNCHER=mpiexec -f machinefile
 
 all: seism-core-slice seism-core-check
 
 check-slice: seism-core-slice seism-core-check
-	$(MPIEXEC) ./seism-core-slice < tests/check.in
+	$(MPI_LAUNCHER) ./seism-core-slice < tests/check.in
 	./seism-core-check seism-test.h5
 	rm seism-test.h5
 
 check-slice-static: seism-core-slice-static seism-core-check-static
-	$(MPIEXEC) ./seism-core-slice < tests/check.in
+	$(MPI_LAUNCHER) ./seism-core-slice < tests/check.in
 	./seism-core-check seism-test.h5
 	rm seism-test.h5
 

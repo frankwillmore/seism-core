@@ -1,17 +1,15 @@
 # default test set
 processor 2 2 2
-chunk 180 128 128
-domain 360 128 128
-time 5
+#chunk 512 512 512
+domain 256 256 256
+time 1
 #precreate
 #collective_write
 #set_collective_metadata
 #never_fill
+#deflate 5
 #zfp 1 
-#subfile 8
-deflate 0
-filename seism-test.h5
-lfs_stripe_count 2
-#zfp 1
+subfile 8
+n_nodes 1
 DONE
 
