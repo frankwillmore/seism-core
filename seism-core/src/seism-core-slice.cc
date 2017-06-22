@@ -137,7 +137,7 @@ int main(int argc, char** argv)
     string use_function_argv_string;
     char use_function_argv[256];
     use_function_argv[0] = 0; // truncate any junk string in auto var
-	int zfp = 0;
+    int zfp = 0;
     const char *use_function_argv_c_str = NULL;
 
     if (mpi_rank==0)

@@ -1,0 +1,16 @@
+# Feature versions may require that certain MACROs be defined for conditional compilation
+FEATURES=
+include features.mk
+
+PHDF5_INCLUDE=$(WORK)/usr/local/phdf5/include
+
+# Platform specific stuff
+CXX=h5pcc
+INCLUDES=$(PHDF5_INCLUDE)
+CXXFLAGS=-Wall -pedantic -O2 -lstdc++ $(ZFP_FLAGS) -std=c++0x -I$(INCLUDES) $(FEATURES)
+CXXDEBUGFLAGS=-Wall -pedantic -O0 -g -std=c++0x -I$(INCLUDES) $(FEATURES)
+MPI_LAUNCHER=ibrun -o 0 
+
+include targets.mk
+
+
