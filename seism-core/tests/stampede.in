@@ -1,0 +1,17 @@
+# default test set
+processor 2 2 4
+chunk 256 256 256
+domain 256 128 128
+time 1
+#precreate
+#collective_write
+#set_collective_metadata
+never_fill
+#zfp 1 
+#subfile 8
+deflate 0
+filename seism-test.h5
+lfs_stripe_count 2
+#zfp 1
+DONE
+

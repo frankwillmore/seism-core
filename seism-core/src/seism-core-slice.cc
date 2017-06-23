@@ -264,6 +264,7 @@ int main(int argc, char** argv)
 
         // attempt to set striping, if requested
         if (lfs_stripe_size || lfs_stripe_count) {
+            cout << "Finding lfs command:" << endl;
             int lfs_status = system("which lfs");
             if (lfs_status) {
                 cout << endl 
@@ -273,11 +274,15 @@ int main(int argc, char** argv)
             }
             else {
                 char lfs_size_str[256];
+                lfs_size_str[0] = (char)0;
                 char lfs_count_str[256];
+                lfs_count_str[0] = (char)0;
                 if (lfs_stripe_size) sprintf(lfs_size_str, "-s %d ", lfs_stripe_size);
                 if (lfs_stripe_count) sprintf(lfs_count_str, "-c %d ", lfs_stripe_count);
                 char lfs_command[256];
-                sprintf(lfs_command, "lfs setstripe %u %u %s > /dev/null ", lfs_stripe_size, lfs_stripe_count, filename);
+                cout << "Setting striping info:" << endl;
+                sprintf(lfs_command, "lfs setstripe %s %s %s > /dev/null ", lfs_size_str, lfs_count_str, filename);
+                cout << lfs_command << endl << endl;
                 assert(system(lfs_command) == 0) ; // run striping command on shell.
             }
         }
