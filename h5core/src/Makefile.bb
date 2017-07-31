@@ -15,5 +15,5 @@ veryclean: clean
 	rm -f h5core
 
 check:
-	sh ./scripts/h5core.sh
+	sh ./scripts/h5core.sh -l 28
 	
