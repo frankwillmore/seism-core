@@ -37,7 +37,7 @@ main (int argc, char **argv)
   int c, errflg = 0, backflg = 0, incrflg = 0, nopagflg = 0, pagflg = 0, rank, nranks;
   hid_t fapl, file, group, group1, dset;
   size_t incr, page;
-  unsigned iter, level, igroup, idset, maxiter;
+  unsigned iter, level, igroup, idset, maxiter, maxtlevel;
   char name[MAX_LEN];
   char g1name[MAX_LEN];
   char g2name[MAX_LEN];
@@ -58,8 +58,9 @@ main (int argc, char **argv)
   incr = INCREMENT;
   page = PAGE_SIZE;
   maxiter = MAX_ITER;
+  maxtlevel = MAX_TIME_LEVEL;
 
-  while ((c = getopt(argc, argv, ":bni:t:p:")) != -1)
+  while ((c = getopt(argc, argv, ":bni:l:t:p:")) != -1)
     {
       switch (c)
       {
@@ -70,6 +71,15 @@ main (int argc, char **argv)
         incrflg++;
         incr = (size_t)atol(optarg);
         if (incr == 0)
+          {
+            fprintf(stderr,
+                    "Option -%c requires a positive integer argument\n", optopt);
+            errflg++;
+          }
+        break;
+      case 'l':
+        maxtlevel = atol(optarg);
+        if (maxtlevel == 0)
           {
             fprintf(stderr,
                     "Option -%c requires a positive integer argument\n", optopt);
@@ -122,6 +132,8 @@ main (int argc, char **argv)
           fprintf(stderr, "  OPTIONS\n");
           fprintf(stderr, "     -b      Write file to disk on exit\n");
           fprintf(stderr, "     -i I    Memory buffer increment size in bytes [default: 512 MB]\n");
+          fprintf(stderr, "     -l L    Set MAX_TIME_LEVEL: [default: 70]\n");
+          fprintf(stderr, "             - determines file size for each iteration\n");
           fprintf(stderr, "     -n      Disable write (to disk) paging\n");
           fprintf(stderr, "     -p P    Page size in bytes [default: 64 MB]\n");
           fprintf(stderr, "     -t T    Number of iterations [default: 5]\n");
@@ -168,6 +180,7 @@ main (int argc, char **argv)
       printf("\n");
       printf("Write to disk: %s\n", (backflg > 0) ? "YES" : "NO");
       printf("Increment size: %ld [bytes]\n", incr);
+      printf("Maximum time level used:  %u.\n", maxtlevel);
 
       if (nopagflg == 0)
         {
@@ -224,7 +237,7 @@ main (int argc, char **argv)
       t1 = MPI_Wtime ();
 
       /* time level */
-      for (level = 0; level < MAX_TIME_LEVEL; ++level)
+      for (level = 0; level < maxtlevel; ++level)
         {
           assert (sprintf (g1name, "level%03d", level) > 0);
           group = H5Gcreate2 (file, g1name, H5P_DEFAULT, H5P_DEFAULT,
@@ -322,7 +335,7 @@ main (int argc, char **argv)
       printf ("Total time: %f s\n", stop - start);
       printf ("Aggregate bandwidth per process: %f GB/s\n",
               ((float) X * Y * Z * sizeof (float)) *
-              ((float) MAX_DATASETS * MAX_GROUPS * MAX_TIME_LEVEL * MAX_ITER) /
+              ((float) MAX_DATASETS * MAX_GROUPS * maxtlevel * MAX_ITER) /
               (1024.0 * 1024.0 * 1024.0 * (stop - start)));
     }
 
