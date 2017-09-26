@@ -22,7 +22,7 @@ check-slice: seism-core-slice seism-core-check
         echo "$(HDF5_DRIVER) $${tname} $(TEST_FLAGS) Test Log" >> $${log}; \
         echo "============================" >> $${log}; \
         srcdir="$(srcdir)" \
-           $(TEST_CMD)  && touch $${tname}.chkexe || \
+           $(TEST_CMD) && touch $${tname}.chkexe || \
            (test $$HDF5_Make_Ignore && echo "*** Error ignored") || \
            (cat $${log} && false) || exit 1; \
         echo "" >> $${log}; \
