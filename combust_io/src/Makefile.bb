@@ -18,7 +18,26 @@ clean:
 	rm -f *.o *.mod
 
 veryclean: clean
-	rm -f *.x *~
+	rm -f *.x *~ *.chkexe *.chklog
+
+TEST_NAME=kernel.sh
+TEST_CMD=sh ./scripts/kernel.sh
 
 check:
-	sh ./scripts/kernel.sh
+	tname=$(TEST_NAME);\
+        log=$${tname}.chklog; \
+        echo "============================" > $${log}; \
+        echo "Testing $(HDF5_DRIVER) $${tname} $(TEST_FLAGS)"; \
+        echo "$(HDF5_DRIVER) $${tname} $(TEST_FLAGS) Test Log" >> $${log}; \
+        echo "============================" >> $${log}; \
+        srcdir="$(srcdir)" \
+           $(TEST_CMD) >> $${log} 2>&1 \
+           && touch $${tname}.chkexe || \
+           (test $$HDF5_Make_Ignore && echo "*** Error ignored") || \
+           (cat $${log} && false) || exit 1; \
+        echo "" >> $${log}; \
+        echo "Finished testing $${tname} $(TEST_FLAGS)" >> $${log}; \
+        echo "============================" >> $${log}; \
+        echo "Finished testing $${tname} $(TEST_FLAGS)"; \
+        cat $${log}; 
+
