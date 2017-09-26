@@ -12,7 +12,7 @@ seism-core-slice: seism-core-slice.o seism-core-attributes.o
 TEST_NAME=seism-core-slice
 TEST_CMD=mpiexec -n 8 ./seism-core-slice < ./tests/check-0.in >> $${log}; \
         ./seism-core-check seism-test.h5 >> $${log}; \
-        rm seism-test.h5; 
+        rm seism-test.h5 
 
 check-slice: seism-core-slice seism-core-check
 	tname=$(TEST_NAME); \
