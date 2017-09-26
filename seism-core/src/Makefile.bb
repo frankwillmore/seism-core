@@ -9,10 +9,32 @@ all: seism-core-slice seism-core-check
 seism-core-slice: seism-core-slice.o seism-core-attributes.o
 	$(CXX) $(CXXFLAGS) seism-core-attributes.o seism-core-slice.o -o $@ -lstdc++
 
+TEST_NAME=seism-core
+TEST_CMD=mpiexec -n 8 ./seism-core-slice < ./tests/check-0.in >> $${log}; \
+        ./seism-core-check seism-test.h5 >> $${log}; \
+        rm seism-test.h5; \
+        cd ..
+
 check-slice: seism-core-slice seism-core-check
-	mpiexec -n 8 ./seism-core-slice < ./tests/check-0.in
-	./seism-core-check seism-test.h5
-	rm seism-test.h5
+	tname=$(TEST_NAME);\
+        log=$${tname}.chklog; \
+        echo "============================" > $${log}; \
+        echo "Testing $(HDF5_DRIVER) $${tname} $(TEST_FLAGS)"; \
+        echo "$(HDF5_DRIVER) $${tname} $(TEST_FLAGS) Test Log" >> $${log}; \
+        echo "============================" >> $${log}; \
+        srcdir="$(srcdir)" \
+           $(TEST_CMD)  && touch $${tname}.chkexe || \
+           (test $$HDF5_Make_Ignore && echo "*** Error ignored") || \
+           (cat $${log} && false) || exit 1; \
+        echo "" >> $${log}; \
+        echo "Finished testing $${tname} $(TEST_FLAGS)" >> $${log}; \
+        echo "============================" >> $${log}; \
+        echo "Finished testing $${tname} $(TEST_FLAGS)"; \
+        cat $${log};
+
+#	mpiexec -n 8 ./seism-core-slice < ./tests/check-0.in
+#	./seism-core-check seism-test.h5
+#	rm seism-test.h5
 
 seism-core.o: src/seism-core.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -33,7 +55,7 @@ clean:
 	rm -f *.o *.h5
 
 veryclean: clean
-	rm -f seism-core seism-core-slice seism-core-slicexx seism-core-check
+	rm -f seism-core seism-core-slice seism-core-slicexx seism-core-check *.chkexe *.chklog
 
 
 check: check-slice
