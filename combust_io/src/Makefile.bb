@@ -20,7 +20,7 @@ clean:
 veryclean: clean
 	rm -f *.x *~ *.chkexe *.chklog
 
-TEST_NAME=combust_io
+TEST_NAME=kernel.sh
 TEST_CMD=sh ./scripts/kernel.sh
 
 check:
@@ -41,5 +41,3 @@ check:
         echo "Finished testing $${tname} $(TEST_FLAGS)"; \
         cat $${log}; 
 
-#	sh ./scripts/kernel.sh
-#                 $(TIME) $(RUNEXEC) ./$${tname} $(TEST_FLAGS) >> $${log} 2>&1 \

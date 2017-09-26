@@ -9,14 +9,13 @@ all: seism-core-slice seism-core-check
 seism-core-slice: seism-core-slice.o seism-core-attributes.o
 	$(CXX) $(CXXFLAGS) seism-core-attributes.o seism-core-slice.o -o $@ -lstdc++
 
-TEST_NAME=seism-core
+TEST_NAME=seism-core-slice
 TEST_CMD=mpiexec -n 8 ./seism-core-slice < ./tests/check-0.in >> $${log}; \
         ./seism-core-check seism-test.h5 >> $${log}; \
-        rm seism-test.h5; \
-        cd ..
+        rm seism-test.h5; 
 
 check-slice: seism-core-slice seism-core-check
-	tname=$(TEST_NAME);\
+	tname=$(TEST_NAME); \
         log=$${tname}.chklog; \
         echo "============================" > $${log}; \
         echo "Testing $(HDF5_DRIVER) $${tname} $(TEST_FLAGS)"; \
@@ -31,10 +30,6 @@ check-slice: seism-core-slice seism-core-check
         echo "============================" >> $${log}; \
         echo "Finished testing $${tname} $(TEST_FLAGS)"; \
         cat $${log};
-
-#	mpiexec -n 8 ./seism-core-slice < ./tests/check-0.in
-#	./seism-core-check seism-test.h5
-#	rm seism-test.h5
 
 seism-core.o: src/seism-core.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
