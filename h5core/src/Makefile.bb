@@ -20,20 +20,19 @@ TEST_CMD=sh ./scripts/h5core.sh -l 28
 check:
 	tname=$(TEST_NAME);\
         log=$${tname}.chklog; \
-        echo "============================" > $${log}; \
+        echo "============================" | tee $${log}; \
         echo "Testing $(HDF5_DRIVER) $${tname} $(TEST_FLAGS)"; \
-        echo "$(HDF5_DRIVER) $${tname} $(TEST_FLAGS) Test Log" >> $${log}; \
-        echo "============================" >> $${log}; \
+        echo "$(HDF5_DRIVER) $${tname} $(TEST_FLAGS) Test Log" | tee -a $${log}; \
+        echo "============================" | tee -a $${log}; \
         srcdir="$(srcdir)" \
-           $(TEST_CMD) >> $${log} 2>&1 \
+           $(TEST_CMD) | tee -a $${log} 2>&1 \
            && touch $${tname}.chkexe || \
            (test $$HDF5_Make_Ignore && echo "*** Error ignored") || \
            (cat $${log} && false) || exit 1; \
-        echo "" >> $${log}; \
-        echo "Finished testing $${tname} $(TEST_FLAGS)" >> $${log}; \
-        echo "============================" >> $${log}; \
-        echo "Finished testing $${tname} $(TEST_FLAGS)"; \
-        cat $${log}; 
+        echo "" | tee -a $${log}; \
+        echo "Finished testing $${tname} $(TEST_FLAGS)" | tee -a $${log}; \
+        echo "============================" | tee -a $${log}; \
+        echo "Finished testing $${tname} $(TEST_FLAGS)"; 
 
 #	sh ./scripts/h5core.sh -l 28
 	
