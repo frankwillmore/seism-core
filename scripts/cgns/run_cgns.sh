@@ -2,18 +2,49 @@
 #
 #
 # This script will build CGNS, and get performance numbers, for all the currently released versions of HDF5.
-# 
+#
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+PARALLEL=0
+case $key in
+    --enable-parallel)
+    PARALLEL=1
+    shift
+    ;;
+    --default)
+    PARALLEL=0
+    shift
+    ;;
+    *)    # unknown option
+    ;;
+esac
+done
+
+OPTS=""
+if [[ $PARALLEL != 1 ]]; then
+   echo "Enabled Parallel: FALSE"
+   export CC="gcc"
+   export FC="gfortran"
+   export F77="gfortran"
+else
+   echo "Enabled Parallel: TRUE"
+   OPTS="--enable-parallel"
+   export CC="mpicc"
+   export FC="mpif90"
+   export F77="mpif90"
+fi
+
 # Output all the results in the cgns-timings file.
 # Does not test parallel.
 #
 
 # List of all the HDF5 versions to run through
-VER_HDF5="8_1 8_2 8_3-patched 8_4-patch1 8_5-patch1 8_6 8_7 8_8 8_9 8_10-patch1 8_11 8_12 8_13 8_14 8_15-patch1 8_16 8_17 8_18 10_0-patch1 10_1"
+#VER_HDF5="8_1 8_2 8_3-patched 8_4-patch1 8_5-patch1 8_6 8_7 8_8 8_9 8_10-patch1 8_11 8_12 8_13 8_14 8_15-patch1 8_16 8_17 8_18 8_19 8_20 10_0-patch1 10_1"
 
-#VER_HDF5="8_11"
-export CC="gcc"
-export FC="gfortran"
-export F77="gfortran"
+VER_HDF5="8_20"
 export LIBS="-ldl"
 export FLIBS="-ldl"
 #export LIBS="-Wl,--no-as-needed -ldl"
@@ -33,8 +64,15 @@ do
     mkdir build
     cd build
 
+    if [[ $VER_HDF5 == 1* ]]; then
+	HDF5_OPTS="--enable-build-mode=production $OPTS"	
+    else
+	HDF5_OPTS="--enable-production $OPTS"
+    fi
+	
+
     HDF5=$PWD
-    ../configure --disable-fortran --disable-hl --enable-build-mode=production
+    ../configure --disable-fortran --disable-hl $HDF5_OPTS
     make -i -j 16
     status=$?
     if [[ $status != 0 ]]; then
@@ -61,7 +99,7 @@ do
 	--enable-debug \
 	--disable-cgnstools \
         --with-zlib=/usr/include,/usr/lib64/ \
-	--enable-64bit
+	--enable-64bit $OPTS
 
     make -j 16
     status=$?
@@ -69,20 +107,35 @@ do
 	echo "CGNS make #FAILED"
 	exit $status
     fi
-    
-    # compile the tests
-    make -j 16 check
-    status=$?
-    if [[ $status != 0 ]]; then
-	echo "CGNS make check #FAILED"
-	exit $status
+    if [[ $PARALLEL != 1 ]]; then
+      # compile the tests
+      make -j 16 check
+      status=$?
+      if [[ $status != 0 ]]; then
+	  echo "CGNS make check #FAILED"
+	  exit $status
+      fi
+      # Time make check (does not include the complilation time)
+      { /usr/bin/time -f "%e real" make check ; } 2> results
+      { echo -n "1_$i " & grep -i "real" results; } > ../../cgns_$j
+      cd ../../
+      rm -fr hdf5/build
+      rm -fr CGNS
+    else
+      cd ptests
+      make -j 16
+      status=$?
+      if [[ $status != 0 ]]; then
+	  echo "PCGNS make #FAILED"
+	  exit $status
+      fi
+      # Time make check (does not include the complilation time)
+      { /usr/bin/time -f "%e real" make test ; } 2> results
+      { echo -n "1_$i " & grep -i "real" results; } > ../../cgns_$j
+      cd ../../
+      rm -fr hdf5/build
+      rm -fr CGNS
     fi
-    # Time make check (does not include the complilation time)
-    { /usr/bin/time -f "%e real" make check ; } 2> results
-    { echo -n "1_$i " & grep -i "real" results; } > ../../cgns_$j
-    cd ../../
-    rm -fr hdf5/build
-    rm -fr CGNS
 
 done
 
