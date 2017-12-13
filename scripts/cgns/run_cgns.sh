@@ -3,6 +3,13 @@
 #
 # This script will build CGNS, and get performance numbers, for all the currently released versions of HDF5.
 #
+red=$'\e[1;31m'
+grn=$'\e[1;32m'
+yel=$'\e[1;33m'
+blu=$'\e[1;34m'
+mag=$'\e[1;35m'
+cyn=$'\e[1;36m'
+nc='\033[0m' # No Color
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -23,28 +30,35 @@ case $key in
 esac
 done
 
+host=$HOSTNAME
+
 OPTS=""
 if [[ $PARALLEL != 1 ]]; then
-   echo "Enabled Parallel: FALSE"
+   echo -e "${red}Enabled Parallel: FALSE${nc}"
    export CC="gcc"
    export FC="gfortran"
    export F77="gfortran"
 else
-   echo "Enabled Parallel: TRUE"
+   echo -e "${green}Enabled Parallel: TRUE${nc}"
    OPTS="--enable-parallel"
    export CC="mpicc"
    export FC="mpif90"
    export F77="mpif90"
+
+   if [[ "$host" == *"cetus"* || "$host" == *"mira"* ]]; then
+       export MPIEXEC="runjob -n 256 -p 16 --block $COBALT_PARTNAME :"
+   else
+       export MPIEXEC="mpiexec -n 4"
+   fi
 fi
 
 # Output all the results in the cgns-timings file.
-# Does not test parallel.
 #
 
 # List of all the HDF5 versions to run through
-VER_HDF5="8_1 8_2 8_3-patched 8_4-patch1 8_5-patch1 8_6 8_7 8_8 8_9 8_10-patch1 8_11 8_12 8_13 8_14 8_15-patch1 8_16 8_17 8_18 8_19 8_20 10_0-patch1 10_1"
+#VER_HDF5="8_1 8_2 8_3-patched 8_4-patch1 8_5-patch1 8_6 8_7 8_8 8_9 8_10-patch1 8_11 8_12 8_13 8_14 8_15-patch1 8_16 8_17 8_18 8_19 8_20 10_0-patch1 10_1"
 
-#VER_HDF5="8_20"
+VER_HDF5="8_20"
 export LIBS="-ldl"
 export FLIBS="-ldl"
 #export LIBS="-Wl,--no-as-needed -ldl"
@@ -131,8 +145,8 @@ do
       fi
       # Time make check (does not include the complilation time)
       { /usr/bin/time -f "%e real" make test ; } 2> results
-      { echo -n "1_$i " & grep -i "real" results; } > ../../cgns_$j
-      cd ../../
+      { echo -n "1_$i " & grep -i "real" results; } > ../../../cgns_$j
+      cd ../../../
       rm -fr hdf5/build
       rm -fr CGNS
     fi
