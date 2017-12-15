@@ -11,18 +11,38 @@ mag=$'\e[1;35m'
 cyn=$'\e[1;36m'
 nc='\033[0m' # No Color
 
+PARALLEL=0
+HDF5BUILD=1
+CGNSBUILD=1
+TEST=1
+
 POSITIONAL=()
 while [[ $# -gt 0 ]]
 do
 key="$1"
-PARALLEL=0
 case $key in
     --enable-parallel)
     PARALLEL=1
     shift
     ;;
+    --hdf5)
+    HDF5="$2" # root install directory
+    shift # past argumente
+    shift # past value
+    ;;
+    --hdf5_nobuild)
+    HDF5BUILD=0
+    shift
+    ;;
+    --cgns_nobuild)
+    CGNSBUILD=0
+    shift
+    ;;
+    --notest)
+    TEST=0
+    shift
+    ;;
     --default)
-    PARALLEL=0
     shift
     ;;
     *)    # unknown option
@@ -39,7 +59,7 @@ if [[ $PARALLEL != 1 ]]; then
    export FC="gfortran"
    export F77="gfortran"
 else
-   echo -e "${green}Enabled Parallel: TRUE${nc}"
+   echo -e "${grn}Enabled Parallel: TRUE${nc}"
    OPTS="--enable-parallel"
    export CC="mpicc"
    export FC="mpif90"
@@ -63,6 +83,8 @@ export LIBS="-ldl"
 export FLIBS="-ldl"
 #export LIBS="-Wl,--no-as-needed -ldl"
 
+ROOT=$PWD
+
 git clone https://brtnfld@bitbucket.hdfgroup.org/scm/hdffv/hdf5.git
 
 j=0
@@ -72,92 +94,113 @@ do
     status=0
     j=$[j + 1]
 # Build HDF5
-    cd hdf5
-    git checkout tags/hdf5-1_$i
-    rm -fr build
-    mkdir build
-    cd build
-
-    if [[ $VER_HDF5 == 1* ]]; then
-	HDF5_OPTS="--enable-build-mode=production $OPTS"	
-    else
-	HDF5_OPTS="--enable-production $OPTS"
-    fi
+    echo $HDF5
+    if [ -z $HDF5 ] && [ $HDF5BUILD = 1 ]; then
+	cd hdf5
+	git checkout tags/hdf5-1_$i
+	rm -fr build_1_${VER_HDF5}
+	mkdir build_1_${VER_HDF5}
+	cd build_1_${VER_HDF5}
+	
+	if [[ $VER_HDF5 == 1* ]]; then
+	    HDF5_OPTS="--enable-build-mode=production $OPTS"	
+	else
+	    HDF5_OPTS="--enable-production $OPTS"
+	fi
 	
 
-    HDF5=$PWD
-    ../configure --disable-fortran --disable-hl $HDF5_OPTS
-    make -i -j 16
-    status=$?
-    if [[ $status != 0 ]]; then
-	echo "HDF5 make #FAILED"
-	exit $status
-    fi
-    make -i -j 16 install
-    status=$?
-    if [[ $status != 0 ]]; then
-	echo "HDF5 make install #FAILED"
-	exit $status
+	HDF5=$PWD
+	../configure --disable-fortran --disable-hl $HDF5_OPTS
+	make -i -j 16
+	status=$?
+	if [[ $status != 0 ]]; then
+	    echo "HDF5 make #FAILED"
+	    exit $status
+	fi
+	make -i -j 16 install
+	status=$?
+	if [[ $status != 0 ]]; then
+	    echo "HDF5 make install #FAILED"
+	    exit $status
+	fi
+	cd ../../
+    else
+	HDF5=hdf5/build_1_${VER_HDF5}
     fi
 
 # Build CGNS
-    cd ../../
-    git clone https://github.com/CGNS/CGNS.git
-    cd CGNS/src
 
-    ./configure \
+    if [ $CGNSBUILD = 1 ]; then
+
+	git clone https://github.com/CGNS/CGNS.git
+	cd CGNS/src
+
+#    rm -fr build_1_${VER_HDF5}
+#    mkdir build_1_${VER_HDF5}
+#    cd build_1_${VER_HDF5}
+
+
+	CONFIG_CMD="./configure \
 	--with-fortran \
-	--with-hdf5=$HDF5/hdf5 \
+	--with-hdf5=$ROOT/$HDF5/hdf5 \
 	--enable-lfs \
 	--disable-shared \
 	--enable-debug \
 	--disable-cgnstools \
         --with-zlib=/usr/include,/usr/lib64/ \
-	--enable-64bit $OPTS
+	--enable-64bit $OPTS"
 
-    make -j 16
-    status=$?
-    if [[ $status != 0 ]]; then
-	echo "CGNS make #FAILED"
-	exit $status
-    fi
-    if [[ $PARALLEL != 1 ]]; then
+	echo "$CONFIG_CMD"
+	$CONFIG_CMD
+	
+	make -j 16
+	status=$?
+	if [[ $status != 0 ]]; then
+	    echo "CGNS make #FAILED"
+	    exit $status
+	fi
+	if [[ $PARALLEL != 1 ]]; then
       # compile the tests
-      make -j 16 check
-      status=$?
-      if [[ $status != 0 ]]; then
-	  echo "CGNS make check #FAILED"
-	  exit $status
-      fi
+	    make -j 16 check
+	    status=$?
+	    if [[ $status != 0 ]]; then
+		echo "CGNS make check #FAILED"
+		exit $status
+	    fi
       # Time make check (does not include the complilation time)
-      { /usr/bin/time -f "%e real" make check ; } 2> results
-      { echo -n "1_$i " & grep -i "real" results; } > ../../cgns_$j
-      cd ../../
-      rm -fr hdf5/build
-      rm -fr CGNS
-    else
-      cd ptests
-      make -j 16
-      status=$?
-      if [[ $status != 0 ]]; then
-	  echo "PCGNS make #FAILED"
-	  exit $status
-      fi
+	    { /usr/bin/time -f "%e real" make check ; } 2> results
+	    { echo -n "1_$i " & grep -i "real" results; } > ../../cgns_$j
+	    cd ../../
+#      rm -fr $HDF5
+	    rm -fr CGNS
+	else
+	    cd ptests
+	    make -j 16
+	    status=$?
+	    if [[ $status != 0 ]]; then
+		echo "PCGNS make #FAILED"
+		exit $status
+	    fi
       # Time make check (does not include the complilation time)
-      { /usr/bin/time -f "%e real" make test ; } 2> results
-      { echo -n "1_$i " & grep -i "real" results; } > ../../../cgns_$j
-      cd ../../../
-      rm -fr hdf5/build
-      rm -fr CGNS
+	    { /usr/bin/time -f "%e real" make test ; } 2> results
+	    { echo -n "1_$i " & grep -i "real" results; } > ../../../cgns_$j
+	    cd ../../../
+#      rm -fr $HDF5
+	    rm -fr CGNS
+	fi
+
     fi
 
 done
 
 # Combine the timing numbers to a single file
+if [ $CGNSBUILD = 1 ]; then
 
-cat cgns_* > cgns-timings
-sed -i 's/real//g' cgns-timings
-sed -i 's/_/./g' cgns-timings
+    cat cgns_* > cgns-timings
+    sed -i 's/real//g' cgns-timings
+    sed -i 's/_/./g' cgns-timings
 
-rm -f cgns_*
+    rm -f cgns_*
+
+fi
 
