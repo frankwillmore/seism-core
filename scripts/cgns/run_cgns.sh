@@ -15,6 +15,7 @@ PARALLEL=0
 HDF5BUILD=1
 CGNSBUILD=1
 TEST=1
+HDF5=""
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -76,14 +77,12 @@ fi
 #
 
 # List of all the HDF5 versions to run through
-#VER_HDF5="8_1 8_2 8_3-patched 8_4-patch1 8_5-patch1 8_6 8_7 8_8 8_9 8_10-patch1 8_11 8_12 8_13 8_14 8_15-patch1 8_16 8_17 8_18 8_19 8_20 10_0-patch1 10_1"
+VER_HDF5="8_1 8_2 8_3-patched 8_4-patch1 8_5-patch1 8_6 8_7 8_8 8_9 8_10-patch1 8_11 8_12 8_13 8_14 8_15-patch1 8_16 8_17 8_18 8_19 8_20 10_0-patch1 10_1 10_2"
 
-VER_HDF5="8_20"
+#VER_HDF5="8_20"
 export LIBS="-ldl"
 export FLIBS="-ldl"
 #export LIBS="-Wl,--no-as-needed -ldl"
-
-ROOT=$PWD
 
 git clone https://brtnfld@bitbucket.hdfgroup.org/scm/hdffv/hdf5.git
 
@@ -94,21 +93,19 @@ do
     status=0
     j=$[j + 1]
 # Build HDF5
-    echo $HDF5
-    if [ -z $HDF5 ] && [ $HDF5BUILD = 1 ]; then
+    if [  $HDF5BUILD = 1 ]; then
 	cd hdf5
 	git checkout tags/hdf5-1_$i
-	rm -fr build_1_${VER_HDF5}
-	mkdir build_1_${VER_HDF5}
-	cd build_1_${VER_HDF5}
+	rm -fr build_1_$i
+	mkdir build_1_$i
+	cd build_1_$i
 	
-	if [[ $VER_HDF5 == 1* ]]; then
+	if [[ $i == 1* ]]; then
 	    HDF5_OPTS="--enable-build-mode=production $OPTS"	
 	else
 	    HDF5_OPTS="--enable-production $OPTS"
 	fi
 	
-
 	HDF5=$PWD
 	../configure --disable-fortran --disable-hl $HDF5_OPTS
 	make -i -j 16
@@ -125,7 +122,7 @@ do
 	fi
 	cd ../../
     else
-	HDF5=hdf5/build_1_${VER_HDF5}
+	HDF5=hdf5/build_1_$i
     fi
 
 # Build CGNS
@@ -142,7 +139,7 @@ do
 
 	CONFIG_CMD="./configure \
 	--with-fortran \
-	--with-hdf5=$ROOT/$HDF5/hdf5 \
+	--with-hdf5=$HDF5/hdf5 \
 	--enable-lfs \
 	--disable-shared \
 	--enable-debug \
@@ -171,8 +168,6 @@ do
 	    { /usr/bin/time -f "%e real" make check ; } 2> results
 	    { echo -n "1_$i " & grep -i "real" results; } > ../../cgns_$j
 	    cd ../../
-#      rm -fr $HDF5
-	    rm -fr CGNS
 	else
 	    cd ptests
 	    make -j 16
@@ -185,9 +180,9 @@ do
 	    { /usr/bin/time -f "%e real" make test ; } 2> results
 	    { echo -n "1_$i " & grep -i "real" results; } > ../../../cgns_$j
 	    cd ../../../
-#      rm -fr $HDF5
-	    rm -fr CGNS
 	fi
+#      rm -fr $HDF5
+	rm -fr CGNS
 
     fi
 
