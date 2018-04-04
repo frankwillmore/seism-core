@@ -39,9 +39,9 @@ set timefmt "%d/%m/%y,%H:%M"
 set angles radians
 set tics back
 set grid nopolar
-set grid xtics nomxtics ytics nomytics noztics nomztics \
+set grid noxtics nomxtics ytics nomytics noztics nomztics \
  nox2tics nomx2tics noy2tics nomy2tics nocbtics nomcbtics
-set grid layerdefault   lt 0 linewidth 0.500,  lt 0 linewidth 0.500
+set grid layerdefault   lt 0 linewidth 1.00,  lt 0 linewidth 0.500
 set raxis
 set style parallel front  lt black linewidth 2.000 dashtype solid
 set key title "" center
@@ -156,11 +156,11 @@ set x2label ""
 set x2label  font "" textcolor lt -1 norotate
 set xrange [ * : * ] noreverse nowriteback
 set x2range [ * : * ] noreverse nowriteback
-set ylabel "Time CGNS \"make check\" (seconds)" 
+set ylabel "Time CGNS \"make check\", Serial (seconds)" 
 set ylabel  font "Times Bold,18" textcolor lt -1 rotate by -270
 set y2label "" 
 set y2label  font "" textcolor lt -1 rotate by -270
-set yrange [ * : * ] noreverse nowriteback
+set yrange [ 0 : * ] noreverse nowriteback
 set y2range [ * : * ] noreverse nowriteback
 set zlabel "" 
 set zlabel  font "" textcolor lt -1 norotate
@@ -196,5 +196,5 @@ set fit brief errorvariables nocovariancevariables errorscaling prescale nowrap 
 GNUTERM = "aqua"
 x = 0.0
 ## Last datafile plotted: "cgns-timings"
-plot 'cgns-timings' using 2:xtic(1) noti
+plot 'cgns-timings' using 2:xtic(1) noti lt 3 
 #    EOF
