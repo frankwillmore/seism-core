@@ -77,9 +77,9 @@ fi
 #
 
 # List of all the HDF5 versions to run through
-VER_HDF5="8_1 8_2 8_3-patched 8_4-patch1 8_5-patch1 8_6 8_7 8_8 8_9 8_10-patch1 8_11 8_12 8_13 8_14 8_15-patch1 8_16 8_17 8_18 8_19 8_20 10_0-patch1 10_1 10_2"
+VER_HDF5="8_1 8_2 8_3-patched 8_4-patch1 8_5-patch1 8_6 8_7 8_8 8_9 8_10-patch1 8_11 8_12 8_13 8_14 8_15-patch1 8_16 8_17 8_18 8_19 8_20 10_0-patch1 10_1 10_2 develop"
 
-#VER_HDF5="8_20"
+#VER_HDF5="develop"
 export LIBS="-ldl"
 export FLIBS="-ldl"
 #export LIBS="-Wl,--no-as-needed -ldl"
@@ -95,12 +95,21 @@ do
 # Build HDF5
     if [  $HDF5BUILD = 1 ]; then
 	cd hdf5
-	git checkout tags/hdf5-1_$i
-	rm -fr build_1_$i
-	mkdir build_1_$i
-	cd build_1_$i
+
+	if [[ $i == d* ]]; then
+	    git checkout develop
+	    ./autogen.sh
+	    rm -fr build_develop
+	    mkdir build_develop
+	    cd build_develop
+	else
+	    git checkout tags/hdf5-1_$i
+	    rm -fr build_1_$i
+	    mkdir build_1_$i
+	    cd build_1_$i
+	fi
 	
-	if [[ $i == 1* ]]; then
+	if [[ $i == 1* || $i == d* ]]; then
 	    HDF5_OPTS="--enable-build-mode=production $OPTS"	
 	else
 	    HDF5_OPTS="--enable-production $OPTS"
@@ -122,7 +131,11 @@ do
 	fi
 	cd ../../
     else
-	HDF5=hdf5/build_1_$i
+	if [[ $i == d* ]]; then
+	    HDF5=hdf5/build_develop
+	else
+	    HDF5=hdf5/build_1_$i
+	fi
     fi
 
 # Build CGNS
