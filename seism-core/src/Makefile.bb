@@ -1,6 +1,6 @@
 #!/usr/bin/make
 
-INCLUDES=../insbin/hdf5/include
+INCLUDES=../../insbin/hdf5/include
 CXXFLAGS=-Wall -pedantic -O2 -std=c++0x -I$(INCLUDES)
 CXXDEBUGFLAGS=-Wall -pedantic -O0 -g -std=c++0x -I$(INCLUDES)
 
