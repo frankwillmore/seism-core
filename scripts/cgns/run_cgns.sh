@@ -128,7 +128,7 @@ do
 	if [[ $status != 0 ]]; then
 	    echo "HDF5 make install #FAILED"
 	    exit $status
-	fi
+        fi
 	cd ../../
     else
 	if [[ $i == d* ]]; then
@@ -178,8 +178,9 @@ do
 		exit $status
 	    fi
       # Time make check (does not include the complilation time)
-	    { /usr/bin/time -f "%e real" make check ; } 2> results
-	    { echo -n "1_$i " & grep -i "real" results; } > ../../cgns_$j
+	    /usr/bin/time -v -f "%e real" -o "results" make check
+            { echo -n "1.$i " & grep "Elapsed" results | sed -n -e 's/^.*ss): //p' | awk -F: '{ print ($1 * 60) + $2 }'; } > ../../cgns_time_$j
+	    { echo -n "1.$i " & grep "Maximum resident" results | sed -n -e 's/^.*bytes): //p'; } > ../../cgns_mem_$j
 	    cd ../../
 	else
 	    cd ptests
@@ -190,12 +191,13 @@ do
 		exit $status
 	    fi
       # Time make check (does not include the complilation time)
-	    { /usr/bin/time -f "%e real" make test ; } 2> results
-	    { echo -n "1_$i " & grep -i "real" results; } > ../../../cgns_$j
+	    /usr/bin/time -v -f "%e real" -o "results" make test
+            { echo -n "1.$i " & grep "Elapsed" results | sed -n -e 's/^.*ss): //p' | awk -F: '{ print ($1 * 60) + $2 }'; } > ../../cgns_time_$j
+	    { echo -n "1.$i " & grep "Maximum resident" results | sed -n -e 's/^.*bytes): //p'; } > ../../cgns_mem_$j
 	    cd ../../../
 	fi
 #      rm -fr $HDF5
-	rm -fr CGNS
+       rm -fr CGNS
 
     fi
 
@@ -204,9 +206,10 @@ done
 # Combine the timing numbers to a single file
 if [ $CGNSBUILD = 1 ]; then
 
-    cat cgns_* > cgns-timings
-    sed -i 's/real//g' cgns-timings
+    cat cgns_time_* > cgns-timings
+    cat cgns_mem_* > cgns-memory
     sed -i 's/_/./g' cgns-timings
+    sed -i 's/_/./g' cgns-memory
 
     rm -f cgns_*
 
