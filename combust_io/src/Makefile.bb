@@ -21,7 +21,7 @@ veryclean: clean
 	rm -f *.x *~ *.chkexe *.chklog
 
 TEST_NAME=kernel.x
-TEST_CMD=sh ./scripts/kernel.sh
+TEST_CMD=$(RUNEXEC) $(TEST_NAME)
 
 check:
 	tname=$(TEST_NAME);\
@@ -30,8 +30,9 @@ check:
         echo "Testing $(HDF5_DRIVER) $${tname} $(TEST_FLAGS)"; \
         echo "$(HDF5_DRIVER) $${tname} $(TEST_FLAGS) Test Log" | tee -a $${log}; \
         echo "============================" | tee -a $${log}; \
-        srcdir="$(srcdir)" \
-           $(TEST_CMD) | tee -a $${log} 2>&1 \
+	sh ./prep_data.bb 4
+	srcdir="$(srcdir)" \
+           $(RUNPARALLEL) $(TEST_CMD) | tee -a $${log} 2>&1 \
            && touch $${tname}.chkexe || \
            (test $$HDF5_Make_Ignore && echo "*** Error ignored") || \
            (cat $${log} && false) || exit 1; \
