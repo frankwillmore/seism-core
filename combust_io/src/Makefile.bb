@@ -32,7 +32,7 @@ check:
         echo "============================" | tee -a $${log}; \
 	sh ./prep_data.bb 4
 	srcdir="$(srcdir)" \
-           $(RUNPARALLEL) $(TEST_CMD) | tee -a $${log} 2>&1 \
+           && $(RUNPARALLEL) $(TEST_CMD) | tee -a $${log} 2>&1 \
            && touch $${tname}.chkexe || \
            (test $$HDF5_Make_Ignore && echo "*** Error ignored") || \
            (cat $${log} && false) || exit 1; \
