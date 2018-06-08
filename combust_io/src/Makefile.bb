@@ -20,7 +20,7 @@ clean:
 veryclean: clean
 	rm -f *.x *~ *.chkexe *.chklog
 
-TEST_NAME=kernel.x
+TEST_NAME=./kernel.x
 TEST_CMD=$(RUNEXEC) $(TEST_NAME)
 
 check:
