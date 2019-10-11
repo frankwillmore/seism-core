@@ -1,24 +1,16 @@
-#!/usr/bin/env make
-
 # Makefile for running on ANL-ALCF theta. 
 
-#  remember to load hdf5 parallel module, not serial because MPI won't resolve
+#  remember to load hdf5 *parallel* module, not *serial* because MPI won't resolve
 #  module load cray-hdf5-parallel 
 
-## no HDF5_INSTALL_DIR=/sw/bw/thg/phdf5/1.9.236cast
 CXX=CC
-#CXXFLAGS=-DCRAYCC -O2 
-#CXXFLAGS=-DCRAYCC -O2 -dynamic
 CXXFLAGS=-O2 -dynamic
-
 
 default:
 	@printf "\033[31;01m' *** See instructions in Makefile, for prerequisites on building with 1.10.0 with two versions ***\033[0m\n"
 	@printf "\033[31;01m' ***  remember to load (parallel) hdf5 module  ***\033[0m\n"
 
 seism-core-slice: seism-core-slice.o seism-core-attributes.o 
-#	$(CXX) $(CXXFLAGS) -ldl -lsz -lstdc++ -lhdf5 seism-core-attributes.o seism-core-slice.o -o seism-core-slice
-#	$(CXX) $(CXXFLAGS) -ldl -lstdc++ -lhdf5 seism-core-attributes.o seism-core-slice.o -o seism-core-slice
 	$(CXX) $(CXXFLAGS) -ldl -lstdc++ seism-core-attributes.o seism-core-slice.o -o seism-core-slice
 
 seism-core-slice.o: seism-core-slice.cc 
@@ -38,25 +30,9 @@ check-slice: seism-core
 	@printf "\033[31;01m *** test file created ***\033[0m\n"
 	aprun -n 1 ./seism-core-check seism-test.h5
 	@printf "\033[31;01m *** check complete ***\033[0m\n\n"
-#	@printf "\033[31;01m *** removing test file ***\033[0m\n\n"
-#	rm seism-test.h5
-	@printf "\033[31;01m *** done ***\033[0m\n\n"
-
-
-check-plugin: seism-core-slice seism-core-check seism-core-plugin
-	#mpiexec -n 8 ./seism-core-slice < ../tests/check-plugin.in
-	aprun -N 8 -n 8 ./seism-core-slice < ../tests/check-plugin.in.bw
-	./seism-core-check seism-test.h5
+	@printf "\033[31;01m *** removing test file ***\033[0m\n\n"
 	rm seism-test.h5
-
-check-sd: seism-core-slice seism-core-check seism-core-plugin
-	#mpiexec -n 8 ./seism-core-slice < ../tests/check-sd.in
-	aprun -N 8 -n 8 ./seism-core-slice < ../tests/check-sd.in.bw
-	#./seism-core-check seism-test.h5
-	#rm seism-test.h5
-
-seism-core-plugin: plugins/libplugins.so 
-	cd plugins && make 
+	@printf "\033[31;01m *** done ***\033[0m\n\n"
 
 clean:
 	rm -f *.o *.h5
