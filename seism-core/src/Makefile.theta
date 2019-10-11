@@ -30,7 +30,9 @@ seism-core-attributes.o: seism-core-attributes.cc
 seism-core-check: seism-core-check.cc seism-core-attributes.o
 	$(CXX) $(CXXFLAGS) seism-core-check.cc seism-core-attributes.o -o seism-core-check -lstdc++
 
-check-slice: seism-core-slice seism-core-check
+seism-core: seism-core-slice seism-core-check
+
+check-slice: seism-core
 	@printf "\033[31;01m *** generating test file for 2x2x2 domain ***\033[0m\n"
 	aprun -n 8 ./seism-core-slice < ../tests/check.in
 	@printf "\033[31;01m *** test file created ***\033[0m\n"
