@@ -226,7 +226,8 @@ int main(int argc, char** argv)
     assert(MPI_Bcast(&zfp, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
 
     // check the arguments
-    assert(time > 0);
+    //FTW was:  assert(time > 0);
+    assert(simulation_time > 0);
     assert(processor[0]*processor[1]*processor[2] == (hsize_t) mpi_size);
     // I'm removing the below restriction to allow for serial case
     // assert(processor[0] > 1 && processor[1] > 1 && processor[2] > 1);
