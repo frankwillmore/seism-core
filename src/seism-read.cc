@@ -33,6 +33,7 @@ int main(int argc, char** argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm comm;
     char subfile_name[256];
+    herr_t herr_retval = (herr_t) 0;
 
     if (argc < 2) {
         cout << "No filename specified\n" ;
@@ -84,7 +85,8 @@ int main(int argc, char** argv)
         // set up property list and communicator
         hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
         assert (fapl_id >= 0);
-        assert (H5Pset_fapl_mpio(fapl_id, comm, info) >= 0);
+        herr_retval = H5Pset_fapl_mpio(fapl_id, comm, info);
+        assert (herr_retval >= 0);
 
         // split by color
         int color = mpi_rank % attr.subfile;
@@ -98,7 +100,8 @@ int main(int argc, char** argv)
         H5Pset_subfiling_access(fapl_id, subfile_name, comm, MPI_INFO_NULL);
         file = H5Fopen(filename, H5F_ACC_RDONLY, fapl_id);
         assert (file >= 0);
-        assert(H5Pclose(fapl_id) >= 0);
+        herr_retval = H5Pclose(fapl_id);
+        assert(herr_retval >= 0);
 #else
         cout << "Warning:  This datafile was sub-filed but this reader was not" 
              << endl
@@ -140,7 +143,8 @@ int main(int argc, char** argv)
     hsize_t block[4] = {1, attr.domain_dims[0], attr.domain_dims[1], attr.domain_dims[2]};
 
     // select hyperslab within file dataspace
-    assert ( H5Sselect_hyperslab( fspace, H5S_SELECT_SET, start, stride, count, block ) >= 0 );
+    herr_retval = H5Sselect_hyperslab( fspace, H5S_SELECT_SET, start, stride, count, block );
+    assert (herr_retval >= 0 );
 
     hid_t mspace = H5Screate_simple(4, block, NULL);
     assert (mspace >= 0);
@@ -148,7 +152,8 @@ int main(int argc, char** argv)
 
     // read the dataset into the buffer
     double begin_read = MPI_Wtime();
-    assert( H5Dread (dset, H5T_NATIVE_FLOAT, mspace, fspace, H5P_DEFAULT, buffer) >= 0);
+    herr_retval = H5Dread (dset, H5T_NATIVE_FLOAT, mspace, fspace, H5P_DEFAULT, buffer);
+    assert(herr_retval >= 0);
     double end_read = MPI_Wtime();
 
     double _read_time = end_read - begin_read;
