@@ -67,9 +67,10 @@ void seismCoreAttributes::init()
 // the object has been created and initialized before calling this 
 void seismCoreAttributes::writeAttributesToFile(hid_t file_id)
 {
+    herr_t herr_retval = 0;
     // commit the compound type to HDF5 file
-    assert(H5Tcommit(file_id, "seismCoreAttributes", attributes_t, 
-                H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) >= 0);
+    herr_retval = H5Tcommit(file_id, "seismCoreAttributes", attributes_t, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    assert (herr_retval >= 0);
     
     // create scalar dataspace for attributes        
     hid_t space_id = H5Screate(H5S_SCALAR);
@@ -81,7 +82,8 @@ void seismCoreAttributes::writeAttributesToFile(hid_t file_id)
             attributes_t, space_id, acpl_id, aapl_id );
 
     // write attribute
-    assert(H5Awrite(attr_id, attributes_t, this) >= 0); 
+    herr_retval = H5Awrite(attr_id, attributes_t, this);
+    assert (herr_retval >= 0); 
 
     // close resources 
     H5Aclose(attr_id);
@@ -140,6 +142,8 @@ seismCoreAttributes::seismCoreAttributes
 // constructor for loading seismCoreAttributes from file
 seismCoreAttributes::seismCoreAttributes(hid_t file_id)
 {
+    herr_t herr_retval = 0;
+
     init();
 
     // stash the values of attributes_h5t, vls_type_c_id, and dim_h5t
@@ -155,7 +159,8 @@ seismCoreAttributes::seismCoreAttributes(hid_t file_id)
     hid_t attr_id = H5Aopen_by_name( file_id, "/", "simulation_attributes", 
             aapl_id, lapl_id );
     assert(attr_id >= 0);
-    assert( H5Aread(attr_id, attributes_t, this ) >= 0);
+    herr_retval = H5Aread(attr_id, attributes_t, this );
+    assert (herr_retval >= 0);
 
     // pop the stashed values
     attributes_t = _attributes_t;
@@ -172,11 +177,16 @@ seismCoreAttributes::~seismCoreAttributes()
 }
 
 void seismCoreAttributes::finalize(){
+
+    herr_t herr_retval = 0;
+
     // close resources 
-    assert(H5Tclose(attributes_t) >= 0);
-    assert(H5Tclose(vls_t) >= 0); 
-//    H5Tclose(fls_t); 
-    assert(H5Tclose(dim3_t) >= 0); 
+    herr_retval = H5Tclose(attributes_t);
+    assert (herr_retval >= 0);
+    herr_retval = H5Tclose(vls_t);
+    assert (herr_retval >= 0);
+    herr_retval = H5Tclose(dim3_t);
+    assert (herr_retval >= 0);
     is_finalized = true;
 }
  
