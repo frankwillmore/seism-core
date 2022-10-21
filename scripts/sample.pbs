@@ -4,7 +4,6 @@
 #PBS -l walltime=00:10:00
 #PBS -N scale
 #PBS -m abe
-##PBS -M your.name@your.organization
 
 
 mkdir -p /scratch/sciteam/$USER/$PBS_JOBNAME
