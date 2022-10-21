@@ -72,47 +72,56 @@ void precreate_0
     hid_t         dcpl
 )
 {
+    herr_t herr_retval = (herr_t) 0;
+
     hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
     assert(fapl >= 0);
-    assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
-           0);
+    herr_retval = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    assert(herr_retval >= 0);
 
     hid_t file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
     assert(file >= 0);
     hid_t dset = H5Dcreate(file, CHUNKED_DSET_NAME, H5T_IEEE_F32LE, fspace,
                            H5P_DEFAULT, dcpl, H5P_DEFAULT);
     assert(dset >= 0);
-    assert(H5Dclose(dset) >= 0);
-    assert(H5Fclose(file) >= 0);
-    assert(H5Pclose(fapl) >= 0);
+    herr_retval = H5Dclose(dset);
+    assert(herr_retval >= 0);
+    herr_retval = H5Fclose(file);
+    assert(herr_retval >= 0);
+    herr_retval = H5Pclose(fapl);
+    assert(herr_retval >= 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 void setMPI_Info(MPI_Info& info, const size_t& v_size, int mpi_size)
 {
-    assert(MPI_Info_create(&info) == MPI_SUCCESS);
-    assert(MPI_Info_set( info, "romio_cb_write", "enable" ) == MPI_SUCCESS);
-    assert(MPI_Info_set( info, "romio_ds_write", "disable" ) == MPI_SUCCESS);
+    int mpi_retval = 0;
+    mpi_retval = MPI_Info_create(&info);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Info_set( info, "romio_cb_write", "enable" );
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Info_set( info, "romio_ds_write", "disable" );
+    assert(mpi_retval == MPI_SUCCESS);
 
     ostringstream ost;
     ost << v_size * sizeof(float);
-    assert(MPI_Info_set( info, "cb_buffer_size", ost.str().c_str()) 
-          == MPI_SUCCESS);
+    mpi_retval = MPI_Info_set( info, "cb_buffer_size", ost.str().c_str());
+    assert(mpi_retval == MPI_SUCCESS);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv)
 {
-    MPI_Init(&argc, &argv);
-
-    double begin = MPI_Wtime();
-
+    herr_t herr_retval = (herr_t) 0;
+    int mpi_retval = 0;
     int mpi_size, mpi_rank;
+
+    MPI_Init(&argc, &argv);
+    double begin = MPI_Wtime();
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-
 
     // rank 0 reads the input file, then broadcasts
     char filename[256];
@@ -197,38 +206,57 @@ int main(int argc, char** argv)
         }
     }
 
-    assert(MPI_Bcast(&simulation_time, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD) ==
-           MPI_SUCCESS);
-    assert(MPI_Bcast(&processor, 3, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD) ==
-           MPI_SUCCESS);
-    assert(MPI_Bcast(&chunk, 3, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
-    assert(MPI_Bcast(&domain, 3, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
-    assert(MPI_Bcast(&collective_write, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
-           MPI_SUCCESS);
-    assert(MPI_Bcast(&precreate, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
-           MPI_SUCCESS);
-    assert(MPI_Bcast(&set_collective_metadata, 1, MPI_INT, 0, MPI_COMM_WORLD) 
-           == MPI_SUCCESS);
-    assert(MPI_Bcast(&never_fill, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
-           MPI_SUCCESS);
-    assert(MPI_Bcast(&deflate, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
-           MPI_SUCCESS);
-    assert(MPI_Bcast(&subfile, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
-           MPI_SUCCESS);
-    assert(MPI_Bcast(&n_nodes, 1, MPI_INT, 0, MPI_COMM_WORLD) ==
-           MPI_SUCCESS);
-    assert(MPI_Bcast(&filename, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
-    assert(MPI_Bcast(&use_function_lib, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
-    assert(MPI_Bcast(&use_function_name, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
-    assert(MPI_Bcast(&use_function_argc, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
-    assert(MPI_Bcast(&use_function_argv, 256, MPI_CHAR, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
-    assert(MPI_Bcast(&deflate, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
-    assert(MPI_Bcast(&zfp, 1, MPI_INT, 0, MPI_COMM_WORLD) == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&simulation_time, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&processor, 3, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&chunk, 3, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&domain, 3, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&collective_write, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&precreate, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&set_collective_metadata, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&never_fill, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&deflate, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&subfile, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&n_nodes, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&filename, 256, MPI_CHAR, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&use_function_lib, 256, MPI_CHAR, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&use_function_name, 256, MPI_CHAR, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&use_function_argc, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&use_function_argv, 256, MPI_CHAR, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&deflate, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
+    mpi_retval = MPI_Bcast(&zfp, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    assert(mpi_retval == MPI_SUCCESS);
 
     // check the arguments
     //FTW was:  assert(time > 0);
     assert(simulation_time > 0);
-    assert(processor[0]*processor[1]*processor[2] == (hsize_t) mpi_size);
+
+    //assert(processor[0]*processor[1]*processor[2] == (hsize_t) mpi_size);
+    // FTW: Some things just shouldn't be assertions...
+    //assert(processor_count == mpi_size);
+    int processor_count = processor[0] * processor[1] * processor[2];
+    if (processor_count != mpi_size)
+    {
+        if (mpi_rank==0) printf("processor count of %d doesn't match mpi_size of %d\nExiting.\n", processor_count, mpi_size);
+        exit(126);
+    } 
+
     // I'm removing the below restriction to allow for serial case
     // assert(processor[0] > 1 && processor[1] > 1 && processor[2] > 1);
 
@@ -316,20 +344,35 @@ int main(int argc, char** argv)
     hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
     assert(dcpl >= 0);
     // subfiling not compatible with chunking
-    if (!subfile) assert(H5Pset_chunk(dcpl, n_dims, cdims) >= 0);
-    if (never_fill) assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
-    assert(H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) >= 0);
-    if (deflate != 0) assert(H5Pset_deflate (dcpl, deflate) >= 0);
+    if (!subfile)
+    {  
+         herr_retval = H5Pset_chunk(dcpl, n_dims, cdims);
+         assert(herr_retval >= 0);
+    }
+    if (never_fill)
+    {
+         herr_retval = H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER );
+         assert(herr_retval >= 0);
+    }
+    herr_retval = H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY);
+    assert(herr_retval >= 0);
+    if (deflate != 0)
+    {
+         herr_retval = H5Pset_deflate (dcpl, deflate);
+         assert(herr_retval >= 0);
+    }
     
 #ifdef INCLUDE_ZFP
 	// ZFP
 	size_t cd_nelmts = 4;
 	unsigned int cd_values[] = {3, 0, 0, 0};
     if (zfp != 0) 
-	{
-		assert(H5Z_zfp_initialize() >= 0);
-		assert(H5Pset_filter(dcpl, H5Z_FILTER_ZFP, H5Z_FLAG_MANDATORY,cd_nelmts, cd_values) >= 0);
-	}
+    {
+         herr_retval = H5Z_zfp_initialize();
+         assert(herr_retval >= 0);
+         herr_retval = H5Pset_filter(dcpl, H5Z_FILTER_ZFP, H5Z_FLAG_MANDATORY,cd_nelmts, cd_values);
+         assert(herr_retval >= 0);
+    }
 #endif
 
     hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
@@ -362,7 +405,8 @@ int main(int argc, char** argv)
     if (collective_write)
     {
         dxpl = H5Pcreate(H5P_DATASET_XFER);
-        assert(H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE) >= 0);
+        herr_retval = H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
+        assert (herr_retval > 0);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -374,7 +418,8 @@ int main(int argc, char** argv)
 
     hid_t mspace = H5Screate_simple(n_dims, dims, NULL);
     assert(mspace >= 0);
-    assert(H5Sselect_all(mspace) >= 0);
+    herr_retval = H5Sselect_all(mspace);
+    assert(herr_retval >= 0);
 
     ///////////////////////////////////////////////////////////////////////////
     // initialize the test data to MPI rank
@@ -428,14 +473,16 @@ int main(int argc, char** argv)
     assert(fapl >= 0);
 
     // use the latest file format
-    assert(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) >=
-         0);
+    herr_retval = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    assert (herr_retval >= 0);
 
     // set collective metadata reads
     if (set_collective_metadata)
     {
-        assert(H5Pset_all_coll_metadata_ops(fapl, true) >=0 );
-        assert(H5Pset_all_coll_metadata_ops(dapl, true) >=0 );
+        herr_retval = H5Pset_all_coll_metadata_ops(fapl, true);
+        assert (herr_retval >= 0 );
+        herr_retval = H5Pset_all_coll_metadata_ops(dapl, true);
+        assert (herr_retval >= 0 );
     }
 
     MPI_Info info;
@@ -448,7 +495,8 @@ int main(int argc, char** argv)
         info = MPI_INFO_NULL;
     }
 
-    assert(H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, info) >= 0);
+    herr_retval = H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, info);
+    assert (herr_retval >= 0);
 
     if (subfile) 
     {
@@ -463,13 +511,16 @@ int main(int argc, char** argv)
         if (n_nodes > subfile) color = (mpi_rank % n_nodes) % subfile;
         MPI_Comm_split (MPI_COMM_WORLD, color, mpi_rank, &comm);
         sprintf(subfile_name, "Subfile_%d.h5", color);
-        assert(H5Pset_subfiling_access(fapl, subfile_name, comm, MPI_INFO_NULL) >= 0); 
+        herr_retval = H5Pset_subfiling_access(fapl, subfile_name, comm, MPI_INFO_NULL);
+        assert (herr_retval >= 0); 
         
         // select hyperslab for subfiling, superset of selection for writing.
         hsize_t subfiling_block[] = {simulation_time, domain[0], domain[1], domain[2]};
         hsize_t subfiling_start[] = {0, start[1], start[2], start[3]};
-        assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, subfiling_start, NULL, count, subfiling_block) >= 0);
-        assert (H5Pset_subfiling_selection(dapl, fspace) >= 0); 
+        herr_retval = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, subfiling_start, NULL, count, subfiling_block);
+        assert (herr_retval >= 0);
+        herr_retval = H5Pset_subfiling_selection(dapl, fspace);
+        assert (herr_retval >= 0); 
 #else 
         cout << "Warning:  Subfilng requested but library not built with subfiling. " << endl;
         cout << "          Ignoring subfiling directives. " << endl << endl;
@@ -525,10 +576,10 @@ int main(int argc, char** argv)
     for (size_t it = 0; it < simulation_time; ++it)
     {
         start[0] = (hsize_t) it;
-        assert(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, count,
-                                   block) >= 0);
-        assert(H5Dwrite(dset_chunked, H5T_NATIVE_FLOAT, mspace, fspace, dxpl,
-                        &v[0]) >= 0);
+        herr_retval = H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, NULL, count, block);
+        assert (herr_retval >= 0);
+        herr_retval = H5Dwrite(dset_chunked, H5T_NATIVE_FLOAT, mspace, fspace, dxpl, &v[0]);
+        assert (herr_retval >= 0);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -539,26 +590,39 @@ int main(int argc, char** argv)
     // get storage size before closing dataset
     hsize_t storage_size = H5Dget_storage_size(dset_chunked);
 
-    assert(H5Dclose(dset_chunked) >= 0);
-    assert(H5Pclose(fapl) >= 0);
-    assert(H5Sclose(mspace) >= 0);
-    assert(H5Pclose(dxpl) >= 0);
-    assert(H5Sclose(fspace) >= 0);
-    assert(H5Pclose(dcpl) >= 0);
+    herr_retval = H5Dclose(dset_chunked);
+    assert (herr_retval >= 0);
+    herr_retval = H5Pclose(fapl);
+    assert (herr_retval >= 0);
+    herr_retval = H5Sclose(mspace);
+    assert (herr_retval >= 0);
+    herr_retval = H5Pclose(dxpl);
+    assert (herr_retval >= 0);
+    herr_retval = H5Sclose(fspace);
+    assert (herr_retval >= 0);
+    herr_retval = H5Pclose(dcpl);
+    assert (herr_retval >= 0);
 
 #ifdef INCLUDE_ZFP
-    if (zfp != 0) assert(H5Z_zfp_finalize() >= 0);
+    if (zfp != 0)
+    {
+         herr_retval = H5Z_zfp_finalize();
+         assert (herr_retval >= 0);
+    }
 #endif
 
     // verify that metadata ops actually performed collectively
     hbool_t actual_metadata_ops_collective;
-    H5Pget_all_coll_metadata_ops( dapl, &actual_metadata_ops_collective );
-    assert(H5Pclose(dapl) >= 0);
+    herr_retval = H5Pget_all_coll_metadata_ops( dapl, &actual_metadata_ops_collective );
+    assert (herr_retval >= 0);
+    herr_retval = H5Pclose(dapl);
+    assert (herr_retval >= 0);
 
     MPI_Barrier(MPI_COMM_WORLD);
     double fclose_start = MPI_Wtime();
 
-    assert(H5Fclose(file) >= 0);
+    herr_retval = H5Fclose(file);
+    assert (herr_retval >= 0);
 
     MPI_Barrier(MPI_COMM_WORLD);
     double fclose_stop = MPI_Wtime();
@@ -621,7 +685,8 @@ int main(int argc, char** argv)
                 use_function_lib, use_function_name, use_function_argc, 
                 argv_junk );
         attr.writeAttributesToFile(file);
-        assert(H5Fclose(file) >=0);
+        herr_retval = H5Fclose(file);
+        assert(herr_retval >=0);
     }
 
     MPI_Finalize();
