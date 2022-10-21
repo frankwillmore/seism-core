@@ -15,23 +15,11 @@ Consecutive three-dimensional slices of a four-dimensional dataset are written f
 
 ## BUILDING
 
-It is assumed that the user has HDF5 installed on their system and wields basic knowledge for the compilation and linking of an HDF5-capable code on their platform. Sample Makefiles are provided in the src directory, for the following systems:
+`seism-core` can be built directly with cmake, or it can be built using its spack package. Building with spack is straightforward. Note that there are dependencies on `mpi` and `hdf5+mpi`. There is a single build option `plugins` (disabled by default) described below.
 
-* Makefile.bw-1.10.0 for NCSA Blue Waters, using HDF5 version 1.10.0
-* Makefile.jelly for a large shared-memory CentOS system used internally at The HDF Group
-* Makefile.vm for a cluster of VirtualBox vms with Ubuntu, used for testing
-* Makefile.edison for NERSC-Edison
+If building directly with cmake, MPI and parallel HDF5 should first be made discoverable. If these are installed and available through a module system, loading the modules is usually sufficient. See https://cmake.org/cmake/help/latest/command/find_package.html for more. 
 
-To build and install on a different system, select the most similar architecture and modify as needed.  In either case, running:
-
-    $ cd src
-    $ make -f ../makefiles/Makefile.whichever_architecture check-slice
-
-will cause the kernel program 'seism-core-slice' and its corresponding test program to be built, run, and output checked based on the input file `tests/check.in`. 
-
-## FEATURE BUILDS
-
-When evaluating pre-release 'feature builds' of HDF5, seism-core provides for conditional compilation via the included Makefile 'features.mk'. Be sure to comment out any conditional macros that are not supported by the version of the HDF5 library you are using, .e.g. H5_SUBFILING should be commented out if not building against a version which implements the sub-filing feature. 
+### TESTING THE BUILD
 
 ---
 
@@ -198,4 +186,17 @@ The Write throughput is the raw speed, not taking into account the overhead of o
 * stripe count (on LUSTRE filesystems)
 
 To obtain reliable results, it's advised to repeat runs under varied system conditions and stripe counts.
+
+## ADVANCED
+
+### Plugins
+
+`seism-core` by default will simply write repeated values of the MPI rank as fill data when teesting IO performance. Plugins allow users to implement their own fill data of their own design. There is a reference plugin mpi_rank_fill which performs the default/non-plugin behavior. Included plugins are also included for generation of gaussian curves and sample data from a seismic application. 
+
+### Feature builds
+
+~~When evaluating pre-release 'feature builds' of HDF5, seism-core provides for conditional compilation via the included Makefile 'features.mk'. Be sure to comment out any conditional macros that are not supported by the version of the HDF5 library you are using, .e.g. H5_SUBFILING should be commented out if not building against a version which implements the sub-filing feature. ~~
+
+Feature build functionality is not yet ported to the CMake build system.
+
 
