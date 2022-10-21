@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.12)
 # set the project name
 project(seism-core)
 
-option(BUILD_PLUGINS "Build plugin library for additional data options" ON)
+option(BUILD_PLUGINS "Build plugin library for additional data options" OFF)
 
 option(BUILD_SHARED_LIBS "shared libs " ON)
 option(BUILD_STATIC_LIBS "static libs " ON)
