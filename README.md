@@ -107,10 +107,10 @@ To verify whether metadata reads were in fact performed collectively:
 
 ### never_fill
 
-Specify this to keep HDF5 from explicitly writing a fill value. The filesystem will typically have its own mechanism of ensuring you are not receiving 'reclaimed data' from the last user of the disk space. The kernel operates on the assumption that a program will be writing unique data from each process, and ignores whatever is there initially. See the reference manual if you would like to set a fill value explicitly. 
+Specify this to keep HDF5 from explicitly writing a fill value. The filesystem will typically have its own mechanism of ensuring you are not receiving 'reclaimed data' from the last user of the disk space. The kernel operates on the assumption that a program will be writing unique data from each process, and ignores whatever is there initially. See the HDF5 reference manual (H5Pset_fill_time) for more.
 
     // Implementation in C
-    if (never_fill) assert(H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER ) >= 0);
+    if (never_fill) herr_retval = H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER);
 
 ## Dynamically loadable fill plugins
 
