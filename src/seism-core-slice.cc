@@ -310,9 +310,16 @@ int main(int argc, char** argv)
                 if (lfs_stripe_count) sprintf(lfs_count_str, "-c %d ", lfs_stripe_count);
                 char lfs_command[256];
                 cout << "Setting striping info:" << endl;
-                sprintf(lfs_command, "lfs setstripe %s %s %s > /dev/null ", lfs_size_str, lfs_count_str, filename);
+                // sprintf(lfs_command, "lfs setstripe %s %s %s > /dev/null ", lfs_size_str, lfs_count_str, filename);
+                sprintf(lfs_command, "lfs setstripe %s %s %s ", lfs_size_str, lfs_count_str, filename);
                 cout << lfs_command << endl << endl;
-                assert(system(lfs_command) == 0) ; // run striping command on shell.
+                // assert(system(lfs_command) == 0) ; // run striping command on shell.
+                int retval = system(lfs_command); // run striping command on shell.
+                if (retval != 0) 
+                {
+                    printf(">>>%s<<<\nCommand failed.\n", lfs_command);
+                    exit(retval);
+                }
             }
         }
     }
